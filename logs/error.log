@@ -1,0 +1,76 @@
+2025-07-30 11:42:07 [31merror[39m: TypeError: setupTenants is not a function
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:17:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-30 11:45:23 [31merror[39m: ReferenceError: setupTenants is not defined
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:17:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-30 11:50:29 [31merror[39m: ReferenceError: setupTenants is not defined
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:17:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-30 11:50:37 [31merror[39m: ReferenceError: setupTenants is not defined
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:17:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-07-30 11:50:49 [31merror[39m: ReferenceError: setupTenants is not defined
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:17:5
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-05 15:17:25 [31merror[39m: TypeError: app.listen is not a function
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:23:24
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-05 15:18:00 [31merror[39m: TypeError: app.listen is not a function
+    at C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\server.js:23:24
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-07 10:31:56 [31merror[39m: Error: Invalid login: 535 5.7.0 Invalid credentials
+    at SMTPConnection._formatError (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+2025-08-12 16:12:48 [31merror[39m: Error: Invalid login: 535 5.7.0 Invalid credentials
+    at SMTPConnection._formatError (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+2025-08-13 10:39:15 [31merror[39m: Error: Invalid login: 535 5.7.0 Invalid credentials
+    at SMTPConnection._formatError (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+2025-08-19 16:39:58 [31merror[39m: Error: Invalid login: 535 5.7.0 Invalid credentials
+    at SMTPConnection._formatError (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+2025-08-19 18:09:33 [31merror[39m: Error: Invalid login: 535 5.7.0 Invalid credentials
+    at SMTPConnection._formatError (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:809:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:1588:34)
+    at SMTPConnection.<anonymous> (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:556:26)
+    at SMTPConnection._processResponse (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:993:20)
+    at SMTPConnection._onData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:774:14)
+    at SMTPConnection._onSocketData (C:\Users\hameed.khan\Desktop\HireOnboardMultiTenant\HireOnboard\node_modules\nodemailer\lib\smtp-connection\index.js:195:44)
+    at TLSSocket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)

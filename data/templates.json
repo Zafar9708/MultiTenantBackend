@@ -1,0 +1,19 @@
+[
+    {
+      "title": "Frontend Developer",
+      "content": "We are looking for a skilled Frontend Developer proficient in React.js to build modern, responsive web applications and collaborate with design teams to deliver engaging user experiences."
+    },
+    {
+      "title": "Backend Developer",
+      "content": "Join our team as a Backend Developer where you'll be designing scalable APIs, managing databases, and optimizing performance for high-traffic platforms using Node.js and Express."
+    },
+    {
+      "title": "Database Administrator",
+      "content": "We are looking for a Database Administrator proficient in managing large-scale databases..."
+    },
+    {
+      "title": "DevOps Engineer",
+      "content": "Looking for a DevOps Engineer to manage and automate cloud infrastructure using Docker, Kubernetes, AWS, etc."
+    }
+  ]
+  
