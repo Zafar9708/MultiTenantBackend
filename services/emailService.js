@@ -1,82 +1,12 @@
-// const nodemailer = require('nodemailer');
-// const logger = require('./logger');
-// const AppError = require('../utils/appError');
-
-// const transporter = nodemailer.createTransport({
-//   host: process.env.EMAIL_HOST,
-//   port: process.env.EMAIL_PORT,
-//   auth: {
-//     user: process.env.EMAIL_USERNAME,
-//     pass: process.env.EMAIL_PASSWORD
-//   }
-// });
-
-// exports.sendJobCreationEmail = async (to, jobDetails) => {
-//   try {
-//     const mailOptions = {
-//       from: `"Job Portal" <${process.env.EMAIL_FROM}>`,
-//       to,
-//       subject: 'New Job Created',
-//       html: `
-//         <h1>New Job Created</h1>
-//         <p>A new job has been created with the following details:</p>
-//         <ul>
-//           <li>Job Name: ${jobDetails.jobName}</li>
-//           <li>Job Title: ${jobDetails.jobTitle}</li>
-//           <li>Department: ${jobDetails.department}</li>
-//         </ul>
-//       `
-//     };
-
-//     await transporter.sendMail(mailOptions);
-//   } catch (err) {
-//     logger.error('Email sending error:', err);
-//     throw new AppError('Failed to send email notification', 500);
-//   }
-// };
-
-// exports.sendSalesPersonNotification = async (to, jobDetails, updaterName = null) => {
-//   try {
-//     const subject = updaterName 
-//       ? `Job Updated: ${jobDetails.jobTitle}`
-//       : `New Job Assigned: ${jobDetails.jobTitle}`;
-
-//     const mailOptions = {
-//       from: `"Job Portal" <${process.env.EMAIL_FROM}>`,
-//       to,
-//       subject,
-//       html: `
-//         <h1>${subject}</h1>
-//         ${updaterName ? `<p>This job was updated by ${updaterName}</p>` : ''}
-//         <p>You have been assigned to the following job:</p>
-//         <ul>
-//           <li>Job Name: ${jobDetails.jobName}</li>
-//           <li>Job Title: ${jobDetails.jobTitle}</li>
-//           <li>Department: ${jobDetails.department}</li>
-//         </ul>
-//       `
-//     };
-
-//     await transporter.sendMail(mailOptions);
-//   } catch (err) {
-//     logger.error('Salesperson notification error:', err);
-//     throw new AppError('Failed to send salesperson notification', 500);
-//   }
-// };
-
-//---------
-
-
 const nodemailer = require('nodemailer');
+const transporter = require('../config/email');
+require('dotenv').config();
 
-// Configure your email transporter
-const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+console.log('=== EMAIL SERVICE DEBUG ===');
+console.log('EMAIL_USERNAME:', process.env.EMAIL_USERNAME);
+console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '***' + process.env.EMAIL_PASSWORD.slice(-4) : 'NOT SET');
+console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
+console.log('===========================');
 
 const sendJobAssignmentEmail = async (to, data) => {
   const { jobName, jobTitle, department, experience, jobDesc, recruiterName, adminName, adminEmail } = data;
@@ -142,7 +72,7 @@ const sendSalesPersonNotification = async (to, data) => {
   const { jobName, jobTitle, department, salesPersonName, creatorName } = data;
   
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from: process.env.EMAIL_FROM,
     to: to,
     subject: `New Job Created: ${jobTitle}`,
     html: `
@@ -195,7 +125,131 @@ const sendSalesPersonNotification = async (to, data) => {
   }
 };
 
+const sendInterviewEmail = async (to, subject, body, meetingLink, feedbackLink, recipientName, emailType = 'technical') => {
+  try {
+    console.log('📧 Attempting to send interview email to:', to);
+
+    let signature = 'HireOnboard Team';
+    if (emailType === 'technical') {
+      signature = 'Technical Team';
+    } else if (emailType === 'final') {
+      signature = 'Hiring Team';
+    }
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: to,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; color: white;">
+            <h1>Interview Scheduled</h1>
+          </div>
+          <div style="padding: 20px; background: #f9f9f9;">
+            ${body.replace(/\n/g, '<br>')}
+            
+            ${meetingLink ? `
+            <div style="margin: 20px 0; padding: 15px; background: #e8f5e8; border-radius: 5px; border-left: 4px solid #4caf50;">
+              <h3 style="margin: 0; color: #2e7d32;">Meeting Link</h3>
+              <p style="margin: 10px 0;">
+                <a href="${meetingLink}" style="color: #1976d2; text-decoration: none; font-weight: bold;">
+                  ${meetingLink}
+                </a>
+              </p>
+            </div>
+            ` : ''}
+            
+            ${feedbackLink && feedbackLink !== 'N/A' ? `
+            <div style="margin: 20px 0; padding: 15px; background: #fff3e0; border-radius: 5px; border-left: 4px solid #ff9800;">
+              <h3 style="margin: 0; color: #ef6c00;">Feedback Required</h3>
+              <p style="margin: 10px 0;">
+                Please submit your feedback after the interview:
+                <a href="${feedbackLink}" style="color: #1976d2; text-decoration: none; font-weight: bold;">
+                  Submit Feedback
+                </a>
+              </p>
+            </div>
+            ` : ''}
+          </div>
+          <div style="padding: 20px; text-align: center; background: #333; color: white;">
+            <p>Best regards,<br>${signature}</p>
+            <p style="font-size: 12px; color: #ccc;">
+              This is an automated message. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully to:', to);
+    console.log('📧 Message ID:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send email to:', to);
+    console.error('❌ Error:', error.message);
+    throw error;
+  }
+};
+
+const sendFeedbackEmail = async (to, interview, feedback, interviewer) => {
+  try {
+    console.log('📧 Attempting to send feedback email to:', to);
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM,
+      to: to,
+      subject: `Interview Feedback for ${interview.candidate.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 20px; text-align: center; color: white;">
+            <h1>Interview Feedback Submitted</h1>
+          </div>
+          <div style="padding: 20px; background: #f9f9f9;">
+            <h3>Interview Details</h3>
+            <p><strong>Candidate:</strong> ${interview.candidate.name}</p>
+            <p><strong>Date:</strong> ${new Date(interview.date).toLocaleDateString()}</p>
+            <p><strong>Interviewer:</strong> ${interviewer.name}</p>
+            
+            <h3>Feedback Details</h3>
+            <p><strong>Status:</strong> ${feedback.status}</p>
+            <p><strong>Technical Skills:</strong> ${feedback.technicalSkills}/5</p>
+            <p><strong>Communication:</strong> ${feedback.communicationSkills}/5</p>
+            <p><strong>Problem Solving:</strong> ${feedback.problemSolving}/5</p>
+            <p><strong>Cultural Fit:</strong> ${feedback.culturalFit}/5</p>
+            
+            <h4>Overall Feedback</h4>
+            <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+              ${feedback.overallFeedback}
+            </div>
+            
+            ${feedback.additionalComments ? `
+            <h4>Additional Comments</h4>
+            <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+              ${feedback.additionalComments}
+            </div>
+            ` : ''}
+          </div>
+          <div style="padding: 20px; text-align: center; background: #333; color: white;">
+            <p>Best regards,<br>Interview Team</p>
+          </div>
+        </div>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Feedback email sent successfully to:', to);
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to send feedback email to:', to);
+    console.error('❌ Error:', error.message);
+    throw error;
+  }
+};
+
 module.exports = {
   sendJobAssignmentEmail,
-  sendSalesPersonNotification
+  sendSalesPersonNotification,
+  sendInterviewEmail,
+  sendFeedbackEmail
 };
