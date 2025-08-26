@@ -66,7 +66,7 @@ exports.createLocation = async (req, res, next) => {
   try {
     const { name } = req.body;
     const { tenantId } = req.user;
-    
+
     if (!name || !name.trim()) {
       return next(new AppError('Location name is required', 400));
     }
@@ -75,7 +75,7 @@ exports.createLocation = async (req, res, next) => {
       name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
       tenantId
     });
-    
+
     if (existingLocation) {
       return next(new AppError('Location already exists', 400));
     }
@@ -85,15 +85,16 @@ exports.createLocation = async (req, res, next) => {
       tenantId,
       isCustom: true
     });
-    
+
     await newLocation.save();
-    
+
     res.status(201).json({
       success: true,
       data: newLocation,
       message: 'Location added successfully'
     });
   } catch (err) {
-    return next(new AppError('Failed to add Location', 500));
+    console.error("Error creating location:", err);   // 👈 log real error
+    return next(new AppError(err.message || 'Failed to add Location', 500));
   }
 };

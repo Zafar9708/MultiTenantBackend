@@ -3,14 +3,14 @@
 const express = require('express');
 const router = express.Router();
 const locationController = require('../controllers/locationController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 
 router.use(protect)
 
 
-router.get('/', locationController.getAllLocations);
+router.get('/',authorize('admin','recruiter') ,locationController.getAllLocations);
 
-router.post('/', locationController.createLocation);
+router.post('/', authorize('admin','recruiter') ,locationController.createLocation);
 
 module.exports = router;

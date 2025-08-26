@@ -17,7 +17,7 @@ router.route('/')
   .get(candidateController.getAllCandidates);
 
 router.route('/:id')
-  .get(candidateController.getCandidateById)
+  .get( authorize('admin','recruiter'),candidateController.getCandidateById)
   .put(
     authorize('admin', 'recruiter'),
     upload.single('resume'),
@@ -52,5 +52,12 @@ router.route('/preview-resume/:id')
 router.route('/download-resume/:id')
        .get(authorize('admin','recruiter'),
          candidateController.downloadResume)
+
+
+router.route('/:id/stage')
+  .patch(
+    authorize('admin', 'recruiter'),
+    candidateController.updateCandidateStage
+  );
 
 module.exports = router;

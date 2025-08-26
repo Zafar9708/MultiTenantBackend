@@ -19,6 +19,7 @@ const notesRoutes=require('./routes/notesRoutes')
 const sourceRoutes=require('./routes/sourceRoutes')
 const stagesRoutes=require('./routes/stagesRoutes')
 const candidateRoutes=require('./routes/candidateRoutes')
+const candidateNotesRoutes = require('./routes/candidateNotesRoutes');
 
 const app = express();
 app.use(cors());
@@ -60,6 +61,7 @@ app.use('/api/v1/notes',notesRoutes);
 app.use('/api/v1/source',sourceRoutes);
 app.use('/api/v1/stages',stagesRoutes);
 app.use('/api/v1/candidates',candidateRoutes)
+app.use('/api/v1/candidatesnotes',candidateNotesRoutes)
 
 app.use((err, req, res, next) => {
   err.statusCode = err.statusCode || 500;

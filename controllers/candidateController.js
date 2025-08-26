@@ -649,9 +649,11 @@ const getCandidateStageHistory = async (req, res) => {
     );
 
     // Find current stage entry date
-    let currentStageDate = null;
+    let currentStageDate = candidate.createdAt; // Default to candidate creation date
+    
     const history = [];
 
+    // Check if we have any stage change comments
     sortedComments.forEach((comment) => {
       if (comment.stageChangedTo) {
         history.push({
@@ -661,6 +663,7 @@ const getCandidateStageHistory = async (req, res) => {
           changedBy: comment.changedBy
         });
 
+        // If this comment shows a change to the current stage, use this date
         if (comment.stageChangedTo === candidate.stage?.name) {
           if (!currentStageDate || new Date(comment.changedAt) > new Date(currentStageDate)) {
             currentStageDate = comment.changedAt;
@@ -668,6 +671,12 @@ const getCandidateStageHistory = async (req, res) => {
         }
       }
     });
+
+    // If we have no stage change history but the candidate has a stage,
+    // use the candidate creation date as when they entered the current stage
+    if (history.length === 0 && candidate.stage?.name) {
+      currentStageDate = candidate.createdAt;
+    }
 
     res.status(200).json({
       success: true,
@@ -753,6 +762,130 @@ const getCandidateResumeAnalysis = async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Error fetching candidate resume analysis'
+    });
+  }
+};
+
+
+// Update candidate stage with role-based access control
+const updateCandidateStage = async (req, res) => {
+  try {
+    const { tenantId, _id: userId, role } = req.user;
+    const { id } = req.params;
+    const { stageId, comment } = req.body;
+
+    console.log('Request details:', { tenantId, candidateId: id, stageId, comment });
+
+    // Validate required fields
+    if (!stageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Stage ID is required'
+      });
+    }
+
+    // Base query with tenant check
+    const query = { _id: id, tenantId };
+    
+    // Recruiters can only update their own candidates
+    if (role === 'recruiter') {
+      query.owner = userId;
+    }
+
+    // Check if candidate exists and is accessible
+    const candidate = await Candidate.findOne(query);
+    console.log('Candidate found:', candidate ? candidate._id : 'Not found');
+    
+    if (!candidate) {
+      return res.status(404).json({
+        success: false,
+        error: 'Candidate not found or not accessible'
+      });
+    }
+
+    // Check if stage exists
+    const stage = await mongoose.model('Stage').findById(stageId);
+    
+    console.log('Stage found:', stage ? stage._id : 'Not found');
+    
+    if (!stage) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid stage selected'
+      });
+    }
+
+    // NEW: Validate that the user exists and belongs to the same tenant
+    const user = await mongoose.model('User').findOne({
+      _id: userId,
+      tenantId: tenantId
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'User not found or not authorized for this tenant'
+      });
+    }
+
+    // Get the current stage name before update
+    const currentStage = await mongoose.model('Stage').findById(candidate.stage);
+    const currentStageName = currentStage ? currentStage.name : 'Not assigned';
+
+    // Get the new stage name
+    const newStageName = stage.name;
+
+    // Update candidate stage - use the user ObjectId directly
+    const updatedCandidate = await Candidate.findByIdAndUpdate(
+      id,
+      { 
+        stage: stageId,
+        $push: {
+          comments: {
+            stageChangedFrom: currentStageName,
+            stageChangedTo: newStageName,
+            changedBy: userId, // This should be a valid ObjectId
+            comment: comment || `Stage changed from ${currentStageName} to ${newStageName}`,
+            changedAt: new Date()
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    )
+      .populate('stage', 'name')
+      .populate('jobId', 'jobTitle')
+      .populate({
+        path: 'comments.changedBy',
+        select: 'name email'
+      });
+
+    res.status(200).json({
+      success: true,
+      message: "Candidate stage updated successfully",
+      candidate: {
+        _id: updatedCandidate._id,
+        name: `${updatedCandidate.firstName} ${updatedCandidate.middleName || ''} ${updatedCandidate.lastName}`.trim(),
+        currentStage: updatedCandidate.stage?.name,
+        previousStage: currentStageName,
+        updatedAt: updatedCandidate.updatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating candidate stage:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', ')
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error updating candidate stage'
     });
   }
 };
@@ -962,5 +1095,6 @@ module.exports = {
   getCandidateResumeAnalysis,
   analyzeResume,
   previewResume,
-  downloadResume
+  downloadResume,
+  updateCandidateStage
 };

@@ -30,4 +30,7 @@ router.get('/:id',authorize('admin', 'recruiter'), getJobDetailById);
 
 router.get('/jobTemplates',authorize('admin', 'recruiter'),getJobTemplates)
 
+
+
+
 module.exports = router;
