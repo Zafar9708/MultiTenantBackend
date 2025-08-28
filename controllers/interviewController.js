@@ -536,6 +536,125 @@ const updateInterviewStatus = async (req, res) => {
     }
 };
 
+// const getAllInterviews = async (req, res) => {
+//     try {
+//         const { 
+//             page = 1, 
+//             limit = 10, 
+//             status, 
+//             jobId, 
+//             interviewerId, 
+//             candidateName, 
+//             dateFrom, 
+//             dateTo,
+//             sortBy = 'date',
+//             sortOrder = 'desc'
+//         } = req.query;
+        
+//         const userId = req.user.id;
+//         const userRole = req.user.role;
+//         const tenantId = req.user.tenantId;
+
+//         // Build base query
+//         let query = {};
+
+//         // Apply tenant and user restrictions based on role
+//         if (userRole === 'recruiter') {
+//             query.tenantId = tenantId;
+//             query.scheduledBy = userId;
+//         } else if (userRole === 'admin') {
+//             query.tenantId = tenantId;
+//         }
+//         // Superadmin can see everything (no tenant filter)
+
+//         // Apply filters
+//         if (status) {
+//             query.status = status;
+//         }
+
+//         if (jobId && isValidObjectId(jobId)) {
+//             query.jobId = jobId;
+//         }
+
+//         if (interviewerId && isValidObjectId(interviewerId)) {
+//             query.interviewers = interviewerId;
+//         }
+
+//         if (candidateName) {
+//             query['candidate.name'] = { $regex: candidateName, $options: 'i' };
+//         }
+
+//         if (dateFrom || dateTo) {
+//             query.date = {};
+//             if (dateFrom) {
+//                 query.date.$gte = new Date(dateFrom);
+//             }
+//             if (dateTo) {
+//                 query.date.$lte = new Date(dateTo);
+//             }
+//         }
+
+//         // Sort configuration
+//         const sortOptions = {};
+//         sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+//         // Execute query with pagination
+//         const interviews = await Interview.find(query)
+//             .populate('interviewers', 'name email')
+//             .populate('templateUsed', 'name')
+//             .populate('scheduledBy', 'name email')
+//             .populate('jobId', 'jobName jobTitle')
+//             .sort(sortOptions)
+//             .limit(limit * 1)
+//             .skip((page - 1) * limit);
+
+//         // Get total count for pagination
+//         const totalCount = await Interview.countDocuments(query);
+
+//         // Add feedback status for each interview
+//         const interviewsWithFeedback = await Promise.all(
+//             interviews.map(async interview => {
+//                 const feedbacks = await Feedback.find({ interviewId: interview._id });
+//                 return {
+//                     ...interview.toObject(),
+//                     feedbackStatus: {
+//                         submitted: feedbacks.length,
+//                         total: interview.interviewers.length,
+//                         pending: interview.interviewers.length - feedbacks.length
+//                     }
+//                 };
+//             })
+//         );
+
+//         res.status(200).json({
+//             success: true,
+//             data: interviewsWithFeedback,
+//             pagination: {
+//                 currentPage: parseInt(page),
+//                 totalPages: Math.ceil(totalCount / limit),
+//                 totalItems: totalCount,
+//                 itemsPerPage: parseInt(limit)
+//             },
+//             filters: {
+//                 status,
+//                 jobId,
+//                 interviewerId,
+//                 candidateName,
+//                 dateFrom,
+//                 dateTo
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error('Error fetching interviews:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Internal server error',
+//             error: error.message
+//         });
+//     }
+// };
+
 module.exports = {
     scheduleInterview,
     getTimezones,
@@ -544,5 +663,6 @@ module.exports = {
     getInterviewById,
     getUpcomingInterviews,
     getInterviewFeedback,
-    updateInterviewStatus
+    updateInterviewStatus,
+    
 };

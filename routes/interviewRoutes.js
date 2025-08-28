@@ -18,6 +18,7 @@ router.post('/schedule', interviewController.scheduleInterview);
 router.get('/timezones', interviewController.getTimezones);
 router.get('/durations', interviewController.getDurations);
 router.get('/upcoming', interviewController.getUpcomingInterviews);
+router.get('/interviews/schedule',interviewController.getAllInterviews);
 
 // PARAMETERIZED ROUTES (should come after specific routes)
 router.get('/schedule', interviewController.getAllInterviews);
