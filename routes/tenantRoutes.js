@@ -10,6 +10,9 @@ router
   .patch(protect, authorize('superadmin'), tenantController.updateTenant)
   .delete(protect, authorize('superadmin'), tenantController.deleteTenant);
 
-
+// Add the resend welcome email route
+router
+  .route('/:id/resend-welcome')
+  .post(tenantController.resendWelcomeEmail);
 
 module.exports = router;

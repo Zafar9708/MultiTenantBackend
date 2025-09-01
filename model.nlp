@@ -1,0 +1,1051 @@
+{
+  "settings": {
+    "languages": [
+      "en"
+    ],
+    "tag": "nlp",
+    "threshold": 0.5,
+    "autoLoad": true,
+    "autoSave": true,
+    "modelFileName": "model.nlp",
+    "executeActionsBeforeAnswers": false,
+    "calculateSentiment": true
+  },
+  "nluManager": {
+    "settings": {
+      "tag": "nlu-manager"
+    },
+    "locales": [
+      "en"
+    ],
+    "languageNames": {},
+    "domainManagers": {
+      "en": {
+        "settings": {
+          "locale": "en",
+          "trainByDomain": false,
+          "tag": "domain-manager-en",
+          "nluByDomain": {
+            "default": {
+              "className": "NeuralNlu",
+              "settings": {}
+            }
+          },
+          "useStemDict": true
+        },
+        "stemDict": {
+          "applic,status": {
+            "intent": "application.status",
+            "domain": "default"
+          },
+          "applic,check,my": {
+            "intent": "application.status",
+            "domain": "default"
+          },
+          "applic,is,my,where": {
+            "intent": "application.status",
+            "domain": "default"
+          },
+          "applic,how,is,my,progress": {
+            "intent": "application.status",
+            "domain": "default"
+          },
+          "applic,job,my,of,status": {
+            "intent": "application.status",
+            "domain": "default"
+          },
+          "job,open": {
+            "intent": "job.openings",
+            "domain": "default"
+          },
+          "avail,posit": {
+            "intent": "job.openings",
+            "domain": "default"
+          },
+          "are,avail,job,what": {
+            "intent": "job.openings",
+            "domain": "default"
+          },
+          "open,posit": {
+            "intent": "job.openings",
+            "domain": "default"
+          },
+          "career,opportun": {
+            "intent": "job.openings",
+            "domain": "default"
+          },
+          "profil,updat": {
+            "intent": "profile.update",
+            "domain": "default"
+          },
+          "chang,inform,my": {
+            "intent": "profile.update",
+            "domain": "default"
+          },
+          "detail,edit,my": {
+            "intent": "profile.update",
+            "domain": "default"
+          },
+          "applic,modifi,my": {
+            "intent": "profile.update",
+            "domain": "default"
+          },
+          "chang,contact,info": {
+            "intent": "profile.update",
+            "domain": "default"
+          },
+          "interview,schedul": {
+            "intent": "interview.schedule",
+            "domain": "default"
+          },
+          "interview,is,my,when": {
+            "intent": "interview.schedule",
+            "domain": "default"
+          },
+          "interview,time": {
+            "intent": "interview.schedule",
+            "domain": "default"
+          },
+          "detail,interview": {
+            "intent": "interview.schedule",
+            "domain": "default"
+          },
+          "interview,reschedul": {
+            "intent": "interview.reschedule",
+            "domain": "default"
+          },
+          "help": {
+            "intent": "support.help",
+            "domain": "default"
+          },
+          "help,i,need": {
+            "intent": "support.help",
+            "domain": "default"
+          },
+          "support": {
+            "intent": "support.help",
+            "domain": "default"
+          },
+          "issu,technic": {
+            "intent": "support.technical",
+            "domain": "default"
+          },
+          "not,work": {
+            "intent": "support.technical",
+            "domain": "default"
+          }
+        },
+        "intentDict": {
+          "application.status": "default",
+          "job.openings": "default",
+          "profile.update": "default",
+          "interview.schedule": "default",
+          "interview.reschedule": "default",
+          "support.help": "default",
+          "support.technical": "default"
+        },
+        "sentences": [
+          {
+            "domain": "default",
+            "utterance": "application status",
+            "intent": "application.status"
+          },
+          {
+            "domain": "default",
+            "utterance": "check my application",
+            "intent": "application.status"
+          },
+          {
+            "domain": "default",
+            "utterance": "where is my application",
+            "intent": "application.status"
+          },
+          {
+            "domain": "default",
+            "utterance": "how is my application progressing",
+            "intent": "application.status"
+          },
+          {
+            "domain": "default",
+            "utterance": "status of my job application",
+            "intent": "application.status"
+          },
+          {
+            "domain": "default",
+            "utterance": "job openings",
+            "intent": "job.openings"
+          },
+          {
+            "domain": "default",
+            "utterance": "available positions",
+            "intent": "job.openings"
+          },
+          {
+            "domain": "default",
+            "utterance": "what jobs are available",
+            "intent": "job.openings"
+          },
+          {
+            "domain": "default",
+            "utterance": "open positions",
+            "intent": "job.openings"
+          },
+          {
+            "domain": "default",
+            "utterance": "career opportunities",
+            "intent": "job.openings"
+          },
+          {
+            "domain": "default",
+            "utterance": "update profile",
+            "intent": "profile.update"
+          },
+          {
+            "domain": "default",
+            "utterance": "change my information",
+            "intent": "profile.update"
+          },
+          {
+            "domain": "default",
+            "utterance": "edit my details",
+            "intent": "profile.update"
+          },
+          {
+            "domain": "default",
+            "utterance": "modify my application",
+            "intent": "profile.update"
+          },
+          {
+            "domain": "default",
+            "utterance": "change contact info",
+            "intent": "profile.update"
+          },
+          {
+            "domain": "default",
+            "utterance": "interview schedule",
+            "intent": "interview.schedule"
+          },
+          {
+            "domain": "default",
+            "utterance": "when is my interview",
+            "intent": "interview.schedule"
+          },
+          {
+            "domain": "default",
+            "utterance": "interview timing",
+            "intent": "interview.schedule"
+          },
+          {
+            "domain": "default",
+            "utterance": "interview details",
+            "intent": "interview.schedule"
+          },
+          {
+            "domain": "default",
+            "utterance": "reschedule interview",
+            "intent": "interview.reschedule"
+          },
+          {
+            "domain": "default",
+            "utterance": "help",
+            "intent": "support.help"
+          },
+          {
+            "domain": "default",
+            "utterance": "I need help",
+            "intent": "support.help"
+          },
+          {
+            "domain": "default",
+            "utterance": "support",
+            "intent": "support.help"
+          },
+          {
+            "domain": "default",
+            "utterance": "technical issue",
+            "intent": "support.technical"
+          },
+          {
+            "domain": "default",
+            "utterance": "not working",
+            "intent": "support.technical"
+          }
+        ],
+        "domains": {
+          "master_domain": {
+            "settings": {
+              "locale": "en",
+              "tag": "nlu-en",
+              "keepStopwords": true,
+              "nonefeatureValue": 1,
+              "nonedeltaMultiplier": 1.2,
+              "spellCheck": false,
+              "spellCheckDistance": 1,
+              "filterZeros": true,
+              "log": true
+            },
+            "features": {
+              "applic": 1,
+              "status": 1,
+              "check": 1,
+              "my": 1,
+              "where": 1,
+              "is": 1,
+              "how": 1,
+              "progress": 1,
+              "of": 1,
+              "job": 1,
+              "open": 1,
+              "avail": 1,
+              "posit": 1,
+              "what": 1,
+              "are": 1,
+              "career": 1,
+              "opportun": 1,
+              "updat": 1,
+              "profil": 1,
+              "chang": 1,
+              "inform": 1,
+              "edit": 1,
+              "detail": 1,
+              "modifi": 1,
+              "contact": 1,
+              "info": 1,
+              "interview": 1,
+              "schedul": 1,
+              "when": 1,
+              "time": 1,
+              "reschedul": 1,
+              "help": 1,
+              "i": 1,
+              "need": 1,
+              "support": 1,
+              "technic": 1,
+              "issu": 1,
+              "not": 1,
+              "work": 1
+            },
+            "intents": {
+              "application.status": 1,
+              "job.openings": 1,
+              "profile.update": 1,
+              "interview.schedule": 1,
+              "interview.reschedule": 1,
+              "support.help": 1,
+              "support.technical": 1
+            },
+            "intentFeatures": {
+              "application.status": {
+                "applic": 1,
+                "status": 1,
+                "check": 1,
+                "my": 1,
+                "where": 1,
+                "is": 1,
+                "how": 1,
+                "progress": 1,
+                "of": 1,
+                "job": 1
+              },
+              "job.openings": {
+                "job": 1,
+                "open": 1,
+                "avail": 1,
+                "posit": 1,
+                "what": 1,
+                "are": 1,
+                "career": 1,
+                "opportun": 1
+              },
+              "profile.update": {
+                "updat": 1,
+                "profil": 1,
+                "chang": 1,
+                "my": 1,
+                "inform": 1,
+                "edit": 1,
+                "detail": 1,
+                "modifi": 1,
+                "applic": 1,
+                "contact": 1,
+                "info": 1
+              },
+              "interview.schedule": {
+                "interview": 1,
+                "schedul": 1,
+                "when": 1,
+                "is": 1,
+                "my": 1,
+                "time": 1,
+                "detail": 1
+              },
+              "interview.reschedule": {
+                "reschedul": 1,
+                "interview": 1
+              },
+              "support.help": {
+                "help": 1,
+                "i": 1,
+                "need": 1,
+                "support": 1
+              },
+              "support.technical": {
+                "technic": 1,
+                "issu": 1,
+                "not": 1,
+                "work": 1
+              }
+            },
+            "featuresToIntent": {
+              "applic": [
+                "application.status",
+                "profile.update"
+              ],
+              "status": [
+                "application.status"
+              ],
+              "check": [
+                "application.status"
+              ],
+              "my": [
+                "application.status",
+                "profile.update",
+                "interview.schedule"
+              ],
+              "where": [
+                "application.status"
+              ],
+              "is": [
+                "application.status",
+                "interview.schedule"
+              ],
+              "how": [
+                "application.status"
+              ],
+              "progress": [
+                "application.status"
+              ],
+              "of": [
+                "application.status"
+              ],
+              "job": [
+                "application.status",
+                "job.openings"
+              ],
+              "open": [
+                "job.openings"
+              ],
+              "avail": [
+                "job.openings"
+              ],
+              "posit": [
+                "job.openings"
+              ],
+              "what": [
+                "job.openings"
+              ],
+              "are": [
+                "job.openings"
+              ],
+              "career": [
+                "job.openings"
+              ],
+              "opportun": [
+                "job.openings"
+              ],
+              "updat": [
+                "profile.update"
+              ],
+              "profil": [
+                "profile.update"
+              ],
+              "chang": [
+                "profile.update"
+              ],
+              "inform": [
+                "profile.update"
+              ],
+              "edit": [
+                "profile.update"
+              ],
+              "detail": [
+                "profile.update",
+                "interview.schedule"
+              ],
+              "modifi": [
+                "profile.update"
+              ],
+              "contact": [
+                "profile.update"
+              ],
+              "info": [
+                "profile.update"
+              ],
+              "interview": [
+                "interview.schedule",
+                "interview.reschedule"
+              ],
+              "schedul": [
+                "interview.schedule"
+              ],
+              "when": [
+                "interview.schedule"
+              ],
+              "time": [
+                "interview.schedule"
+              ],
+              "reschedul": [
+                "interview.reschedule"
+              ],
+              "help": [
+                "support.help"
+              ],
+              "i": [
+                "support.help"
+              ],
+              "need": [
+                "support.help"
+              ],
+              "support": [
+                "support.help"
+              ],
+              "technic": [
+                "support.technical"
+              ],
+              "issu": [
+                "support.technical"
+              ],
+              "not": [
+                "support.technical"
+              ],
+              "work": [
+                "support.technical"
+              ]
+            },
+            "neuralNetwork": {
+              "settings": {
+                "locale": "en",
+                "tag": "nlu-en",
+                "keepStopwords": true,
+                "nonefeatureValue": 1,
+                "nonedeltaMultiplier": 1.2,
+                "spellCheck": false,
+                "spellCheckDistance": 1,
+                "filterZeros": true,
+                "log": true
+              },
+              "features": [
+                "applic",
+                "status",
+                "check",
+                "my",
+                "where",
+                "is",
+                "how",
+                "progress",
+                "of",
+                "job",
+                "open",
+                "avail",
+                "posit",
+                "what",
+                "are",
+                "career",
+                "opportun",
+                "updat",
+                "profil",
+                "chang",
+                "inform",
+                "edit",
+                "detail",
+                "modifi",
+                "contact",
+                "info",
+                "interview",
+                "schedul",
+                "when",
+                "time",
+                "reschedul",
+                "help",
+                "i",
+                "need",
+                "support",
+                "technic",
+                "issu",
+                "not",
+                "work"
+              ],
+              "intents": [
+                "application.status",
+                "job.openings",
+                "profile.update",
+                "interview.schedule",
+                "interview.reschedule",
+                "support.help",
+                "support.technical"
+              ],
+              "perceptrons": [
+                [
+                  8.156342506408691,
+                  5.618282794952393,
+                  6.005362033843994,
+                  -0.4378352165222168,
+                  3.06331205368042,
+                  3.0327582359313965,
+                  1.5330685377120972,
+                  1.5330685377120972,
+                  0.7151095867156982,
+                  -0.21554507315158844,
+                  -0.7695292830467224,
+                  -0.589351236820221,
+                  -0.44071707129478455,
+                  -0.3087201714515686,
+                  -0.3087201714515686,
+                  -0.3260236978530884,
+                  -0.3260236978530884,
+                  -0.31706783175468445,
+                  -0.31706783175468445,
+                  -1.014992356300354,
+                  -0.9607969522476196,
+                  -0.9546229243278503,
+                  -0.9546229243278503,
+                  -8.069737434387207,
+                  -0.024969540536403656,
+                  -0.024969540536403656,
+                  -1.668020486831665,
+                  -0.052451953291893005,
+                  -1.5568732023239136,
+                  -0.012180238030850887,
+                  -0.006769462954252958,
+                  -0.4365500807762146,
+                  -0.07052925229072571,
+                  -0.07052925229072571,
+                  -0.43269553780555725,
+                  -0.22446979582309723,
+                  -0.22446979582309723,
+                  -0.22435832023620605,
+                  -0.22435832023620605,
+                  0.45037285244435443
+                ],
+                [
+                  -1.971489667892456,
+                  -1.5535988807678223,
+                  -0.04140408709645271,
+                  -2.596298933029175,
+                  -0.013313059695065022,
+                  -0.1665404886007309,
+                  -0.006776842754334211,
+                  -0.006776842754334211,
+                  -1.1625624895095825,
+                  5.057964324951172,
+                  6.5184526443481445,
+                  5.644882678985596,
+                  5.939235687255859,
+                  0.7272116541862488,
+                  0.7272116541862488,
+                  6.004421710968018,
+                  6.004421710968018,
+                  -1.1988861560821533,
+                  -1.1988861560821533,
+                  -1.140718936920166,
+                  -0.37723416090011597,
+                  -0.35688138008117676,
+                  -0.7178141474723816,
+                  -0.24491022527217865,
+                  -0.7066505551338196,
+                  -0.7066505551338196,
+                  -2.0482685565948486,
+                  -0.5465753078460693,
+                  -0.11241157352924347,
+                  -0.4998399317264557,
+                  -0.4381366968154907,
+                  -2.2568697929382324,
+                  -0.5223684906959534,
+                  -0.5223684906959534,
+                  -2.2347280979156494,
+                  -1.1467111110687256,
+                  -1.1467111110687256,
+                  -1.1430244445800781,
+                  -1.1430244445800781,
+                  2.275967339668874
+                ],
+                [
+                  -1.2686870098114014,
+                  -1.9875036478042603,
+                  -5.350258827209473,
+                  5.004583358764648,
+                  -1.7380000352859497,
+                  -3.7272114753723145,
+                  -0.8764333724975586,
+                  -0.8764333724975586,
+                  -1.5832297801971436,
+                  -1.8925539255142212,
+                  -0.6908111572265625,
+                  -0.6930297613143921,
+                  -1.0776783227920532,
+                  -0.08416814357042313,
+                  -0.08416814357042313,
+                  -0.8727453351020813,
+                  -0.8727453351020813,
+                  6.273140907287598,
+                  6.273140907287598,
+                  5.5337371826171875,
+                  2.037778377532959,
+                  4.943818092346191,
+                  2.5867130756378174,
+                  8.690624237060547,
+                  3.497084856033325,
+                  3.497084856033325,
+                  -4.31460428237915,
+                  -0.356731116771698,
+                  -1.046970248222351,
+                  -0.2108909785747528,
+                  -0.13189850747585297,
+                  -1.7764204740524292,
+                  -0.48336026072502136,
+                  -0.48336026072502136,
+                  -1.7406679391860962,
+                  -0.9445998072624207,
+                  -0.9445998072624207,
+                  -0.9400503635406494,
+                  -0.9400503635406494,
+                  1.743620356188439
+                ],
+                [
+                  -1.7094621658325195,
+                  -0.22386668622493744,
+                  -0.21296162903308868,
+                  -1.358304500579834,
+                  -0.6312840580940247,
+                  2.274651288986206,
+                  -0.46266207098960876,
+                  -0.46266207098960876,
+                  -0.08054208010435104,
+                  -0.43802717328071594,
+                  -0.39116939902305603,
+                  -0.3602108955383301,
+                  -0.425904244184494,
+                  -0.09642744809389114,
+                  -0.09642744809389114,
+                  -0.3410490155220032,
+                  -0.3410490155220032,
+                  -0.34005987644195557,
+                  -0.34005987644195557,
+                  -0.4779275059700012,
+                  -0.3195387125015259,
+                  -2.851097583770752,
+                  3.9844460487365723,
+                  -0.015642814338207245,
+                  -0.11953843384981155,
+                  -0.11953843384981155,
+                  9.498387336730957,
+                  4.425008773803711,
+                  3.4351279735565186,
+                  4.431979179382324,
+                  -9.64009952545166,
+                  -0.7138126492500305,
+                  -0.24099069833755493,
+                  -0.24099069833755493,
+                  -0.595402181148529,
+                  -0.388361394405365,
+                  -0.388361394405365,
+                  -0.37859606742858887,
+                  -0.37859606742858887,
+                  0.40643785169694174
+                ],
+                [
+                  -0.23422302305698395,
+                  -0.12497899681329727,
+                  -0.03460219129920006,
+                  -1.036228895187378,
+                  -0.016429267823696136,
+                  -0.907020092010498,
+                  -0.012487423606216908,
+                  -0.012487423606216908,
+                  -0.0095094945281744,
+                  -0.1848531812429428,
+                  -0.18722641468048096,
+                  -0.17188595235347748,
+                  -0.1926659345626831,
+                  -0.056799545884132385,
+                  -0.056799545884132385,
+                  -0.16075749695301056,
+                  -0.16075749695301056,
+                  -0.15799124538898468,
+                  -0.15799124538898468,
+                  -0.1379203349351883,
+                  -0.021688267588615417,
+                  -0.016929756850004196,
+                  -2.6408774852752686,
+                  -0.0017430006992071867,
+                  -0.10493844002485275,
+                  -0.10493844002485275,
+                  2.5086522102355957,
+                  -2.6771202087402344,
+                  -0.8511508107185364,
+                  -2.667325735092163,
+                  11.333425521850586,
+                  -0.31514808535575867,
+                  -0.09900698065757751,
+                  -0.09900698065757751,
+                  -0.27566757798194885,
+                  -0.17163357138633728,
+                  -0.17163357138633728,
+                  -0.16787000000476837,
+                  -0.16787000000476837,
+                  0.2348251060853161
+                ],
+                [
+                  -1.8057012557983398,
+                  -1.2836720943450928,
+                  -0.2263079583644867,
+                  -1.555834412574768,
+                  -0.12083293497562408,
+                  -0.27378103137016296,
+                  -0.08595224469900131,
+                  -0.08595224469900131,
+                  -0.04408429190516472,
+                  -1.4642809629440308,
+                  -1.6223448514938354,
+                  -1.42946457862854,
+                  -1.6543444395065308,
+                  -0.28762948513031006,
+                  -0.28762948513031006,
+                  -1.540436029434204,
+                  -1.540436029434204,
+                  -1.5389087200164795,
+                  -1.5389087200164795,
+                  -1.243590235710144,
+                  -0.3175911009311676,
+                  -0.6223368644714355,
+                  -0.9167869091033936,
+                  -0.006611443590372801,
+                  -0.9250044822692871,
+                  -0.9250044822692871,
+                  -2.4038541316986084,
+                  -0.7022661566734314,
+                  -0.017218559980392456,
+                  -0.6940202713012695,
+                  -0.6837124228477478,
+                  10.535358428955078,
+                  0.427042692899704,
+                  0.427042692899704,
+                  11.043243408203125,
+                  -1.550491452217102,
+                  -1.550491452217102,
+                  -1.5493022203445435,
+                  -1.5493022203445435,
+                  3.1277595045663142
+                ],
+                [
+                  -1.044590711593628,
+                  -0.6357029676437378,
+                  -0.17477300763130188,
+                  -0.9526587724685669,
+                  -0.10537096858024597,
+                  -0.21478110551834106,
+                  -0.06387951970100403,
+                  -0.06387951970100403,
+                  -0.030919170007109642,
+                  -0.8081462383270264,
+                  -0.8880641460418701,
+                  -0.7785667181015015,
+                  -0.9074493646621704,
+                  -0.22188860177993774,
+                  -0.22188860177993774,
+                  -0.8232288360595703,
+                  -0.8232288360595703,
+                  -0.8169754147529602,
+                  -0.8169754147529602,
+                  -0.7037824988365173,
+                  -0.20502202212810516,
+                  -0.26101747155189514,
+                  -0.4783858060836792,
+                  -0.004869609605520964,
+                  -0.4895833134651184,
+                  -0.4895833134651184,
+                  -1.3273898363113403,
+                  -0.38809192180633545,
+                  -0.012084060348570347,
+                  -0.3624357581138611,
+                  -0.331143856048584,
+                  -1.5208998918533325,
+                  -0.32951581478118896,
+                  -0.32951581478118896,
+                  -1.5036485195159912,
+                  6.376936435699463,
+                  6.376936435699463,
+                  6.376490116119385,
+                  6.376490116119385,
+                  1.5261817580308246
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    "intentDomains": {},
+    "extraSentences": [
+      [
+        "en",
+        "application status"
+      ],
+      [
+        "en",
+        "check my application"
+      ],
+      [
+        "en",
+        "where is my application"
+      ],
+      [
+        "en",
+        "how is my application progressing"
+      ],
+      [
+        "en",
+        "status of my job application"
+      ],
+      [
+        "en",
+        "job openings"
+      ],
+      [
+        "en",
+        "available positions"
+      ],
+      [
+        "en",
+        "what jobs are available"
+      ],
+      [
+        "en",
+        "open positions"
+      ],
+      [
+        "en",
+        "career opportunities"
+      ],
+      [
+        "en",
+        "update profile"
+      ],
+      [
+        "en",
+        "change my information"
+      ],
+      [
+        "en",
+        "edit my details"
+      ],
+      [
+        "en",
+        "modify my application"
+      ],
+      [
+        "en",
+        "change contact info"
+      ],
+      [
+        "en",
+        "interview schedule"
+      ],
+      [
+        "en",
+        "when is my interview"
+      ],
+      [
+        "en",
+        "interview timing"
+      ],
+      [
+        "en",
+        "interview details"
+      ],
+      [
+        "en",
+        "reschedule interview"
+      ],
+      [
+        "en",
+        "help"
+      ],
+      [
+        "en",
+        "I need help"
+      ],
+      [
+        "en",
+        "support"
+      ],
+      [
+        "en",
+        "technical issue"
+      ],
+      [
+        "en",
+        "not working"
+      ]
+    ]
+  },
+  "ner": {
+    "settings": {
+      "tag": "ner",
+      "entityPreffix": "%",
+      "entitySuffix": "%"
+    },
+    "rules": {}
+  },
+  "nlgManager": {
+    "settings": {
+      "tag": "nlg-manager"
+    },
+    "responses": {
+      "en": {
+        "application.status": [
+          {
+            "answer": "To check your application status, please provide your application ID or email address. You can also visit the \"Application Status\" section in your dashboard."
+          }
+        ],
+        "job.openings": [
+          {
+            "answer": "You can view all available positions in the \"Careers\" section of our website. Would you like me to show you current openings?"
+          }
+        ],
+        "profile.update": [
+          {
+            "answer": "You can update your profile information by logging into your candidate portal and navigating to \"Profile Settings\"."
+          }
+        ],
+        "interview.schedule": [
+          {
+            "answer": "Your interview details will be emailed to you. Please check your inbox and spam folder. You can also view scheduled interviews in your dashboard."
+          }
+        ],
+        "interview.reschedule": [
+          {
+            "answer": "To reschedule your interview, please contact our HR department at hr@yourcompany.com or call (555) 123-4567."
+          }
+        ],
+        "support.help": [
+          {
+            "answer": "I can help you with application status, job openings, profile updates, and interview information. What do you need help with?"
+          }
+        ],
+        "support.technical": [
+          {
+            "answer": "For technical issues, please contact our support team at support@yourcompany.com or call (555) 987-6543. They are available Monday-Friday, 9AM-5PM."
+          }
+        ]
+      }
+    }
+  },
+  "actionManager": {
+    "settings": {
+      "tag": "action-manager"
+    },
+    "actions": {}
+  },
+  "slotManager": {}
+}

@@ -52,7 +52,7 @@ const moveCandidateStage = async (req, res) => {
 
     const updatedCandidate = await Candidate.findById(id)
       .populate('stage')
-      .populate('userId', 'name email')
+      .populate('owner', 'name email')
       .populate('jobId', 'title');
 
     res.json({

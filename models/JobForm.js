@@ -35,11 +35,13 @@ const jobFormSchema = new mongoose.Schema({
     },
     BusinessUnit: {
         type: String,
+        
         enum: ['internal', 'external'],
         required: true
     },
     Client: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref:"Client",
         required: function() {
             return this.BusinessUnit === 'external';
         }

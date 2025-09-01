@@ -35,6 +35,10 @@ const tenantSchema = new mongoose.Schema({
     theme: String,
     logo: String
   }
+  
 }, { timestamps: true });
+
+
+
 
 module.exports = mongoose.model('Tenant', tenantSchema);

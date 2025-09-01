@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
+const ExcelJS=require('exceljs')
 const Candidate = require('../models/Candidate');
 const Resume = require('../models/Resume');
 const Source = require('../models/Source');
+const path = require('path');
+
 const Location = require('../models/Location');
 const { analyzeResumeWithPerplexity } = require('../services/perplexityMatchingService');
 const cloudinary = require('../config/cloudinary');
@@ -1084,6 +1087,418 @@ function getContentType(fileExt) {
   return contentTypes[fileExt] || null;
 }
 
+const downloadTemplate = async (req, res) => {
+  try {
+    const { tenantId } = req.user;
+    
+    // Create workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Candidates Template');
+    
+    // Add headers
+    worksheet.columns = [
+      { header: 'First Name*', key: 'firstName', width: 20 },
+      { header: 'Last Name*', key: 'lastName', width: 20 },
+      { header: 'Email*', key: 'email', width: 30 },
+      { header: 'Mobile*', key: 'mobile', width: 15 },
+      { header: 'Experience (years)', key: 'experience', width: 15 },
+      { header: 'Skills (comma separated)', key: 'skills', width: 30 },
+      { header: 'Education', key: 'education', width: 25 },
+      { header: 'Available to Join (days)', key: 'availableToJoin', width: 20 },
+      { header: 'Current Location', key: 'currentLocation', width: 20 },
+      { header: 'Preferred Location', key: 'preferredLocation', width: 20 },
+      { header: 'Source', key: 'source', width: 20 },
+      { header: 'Gender', key: 'gender', width: 10 },
+      { header: 'Date of Birth (YYYY-MM-DD)', key: 'dob', width: 15 }
+    ];
+    
+    // Add sample data row
+    const sampleRow = worksheet.addRow({
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      mobile: '1234567890',
+      experience: '5',
+      skills: 'JavaScript, React, Node.js',
+      education: 'Bachelor of Engineering',
+      availableToJoin: '30',
+      currentLocation: 'Chennai',
+      preferredLocation: 'Bangalore',
+      source: 'LinkedIn',
+      gender: 'Male',
+      dob: '1990-01-01'
+    });
+    
+    // Style the header row
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0070C0' } // Blue background
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    
+    // Style the sample row
+    sampleRow.eachCell((cell) => {
+      cell.font = { italic: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF2F2F2' } // Light gray background
+      };
+    });
+    
+    // Add data validation for gender
+    worksheet.dataValidations.add('M2:M1000', {
+      type: 'list',
+      allowBlank: true,
+      formulae: ['"Male,Female,Other,Prefer not to say"']
+    });
+    
+    // Add instructions worksheet
+    const instructionsSheet = workbook.addWorksheet('Instructions');
+    
+    instructionsSheet.columns = [
+      { header: 'Field', key: 'field', width: 20 },
+      { header: 'Description', key: 'description', width: 40 },
+      { header: 'Required', key: 'required', width: 10 },
+      { header: 'Example', key: 'example', width: 20 }
+    ];
+    
+    const instructions = [
+      { field: 'First Name', description: 'Candidate first name', required: 'Yes', example: 'John' },
+      { field: 'Last Name', description: 'Candidate last name', required: 'Yes', example: 'Doe' },
+      { field: 'Email', description: 'Valid email address', required: 'Yes', example: 'john@example.com' },
+      { field: 'Mobile', description: 'Phone number (10-15 digits)', required: 'Yes', example: '1234567890' },
+      { field: 'Experience', description: 'Years of experience', required: 'No', example: '5' },
+      { field: 'Skills', description: 'Comma-separated skills', required: 'No', example: 'JavaScript, React' },
+      { field: 'Education', description: 'Highest education', required: 'No', example: 'Bachelor of Engineering' },
+      { field: 'Available to Join', description: 'Days until available', required: 'No', example: '30' },
+      { field: 'Current Location', description: 'Current city', required: 'No', example: 'Chennai' },
+      { field: 'Preferred Location', description: 'Preferred work city', required: 'No', example: 'Bangalore' },
+      { field: 'Source', description: 'How candidate was found', required: 'No', example: 'LinkedIn' },
+      { field: 'Gender', description: 'Use dropdown options', required: 'No', example: 'Male' },
+      { field: 'Date of Birth', description: 'YYYY-MM-DD format', required: 'No', example: '1990-01-01' }
+    ];
+    
+    instructions.forEach(instruction => {
+      instructionsSheet.addRow(instruction);
+    });
+    
+    // Style instructions sheet header
+    instructionsSheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6E6E6' }
+      };
+    });
+    
+    // Freeze header rows
+    worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    instructionsSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=candidate_upload_template.xlsx');
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Write to response
+    await workbook.xlsx.write(res);
+    res.end();
+    
+  } catch (error) {
+    console.error('Error generating template:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate template'
+    });
+  }
+};
+
+// Bulk upload candidates from Excel
+// In your candidateController.js - bulkUploadCandidates function
+const bulkUploadCandidates = async (req, res) => {
+  try {
+    const { tenantId, _id: userId, role } = req.user;
+    const { jobId } = req.body;
+    const file = req.file;
+    
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+    
+    // Check permissions
+    if (!['admin', 'recruiter'].includes(role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only admins and recruiters can upload candidates'
+      });
+    }
+    
+    // Validate file type (additional check)
+    const allowedExtensions = ['.xls', '.xlsx', '.xlsm', '.xltm'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExtension)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only Excel files (.xlsx, .xls) are allowed'
+      });
+    }
+    
+    // Load ExcelJS dynamically to avoid dependency issues
+    let ExcelJS;
+    try {
+      ExcelJS = require('exceljs');
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: 'Excel processing module not available. Please contact administrator.'
+      });
+    }
+    
+    // Process Excel file
+    const workbook = new ExcelJS.Workbook();
+    
+    try {
+      if (fileExtension === '.xlsx') {
+        await workbook.xlsx.load(file.buffer);
+      } else if (fileExtension === '.xls') {
+        // For .xls files, you might need a different approach
+        // or use a library like xlsx instead
+        return res.status(400).json({
+          success: false,
+          error: '.xls files are not supported. Please use .xlsx format.'
+        });
+      } else {
+        await workbook.xlsx.load(file.buffer);
+      }
+    } catch (excelError) {
+      console.error('Excel parsing error:', excelError);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Excel file. Please check the format and try again.'
+      });
+    }
+    
+    if (workbook.worksheets.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Excel file contains no worksheets'
+      });
+    }
+    
+    const worksheet = workbook.worksheets[0];
+    const candidates = [];
+    const errors = [];
+    
+    // Get locations and sources for validation
+    const [locations, sources, stages] = await Promise.all([
+      Location.find({ tenantId }).select('name'),
+      Source.find({ tenantId }).select('name'),
+      mongoose.model('Stage').find({}).select('name') // Get all stages
+    ]);
+    
+    const locationNames = locations.map(loc => loc.name);
+    const sourceNames = sources.map(src => src.name);
+    const stageNames = stages.map(stage => stage.name);
+    
+    // Process rows (skip header row)
+    for (let i = 2; i <= worksheet.rowCount; i++) {
+      try {
+        const row = worksheet.getRow(i);
+        
+        // Skip empty rows
+        if (!row.getCell(1).value || !row.getCell(1).value.toString().trim()) {
+          continue;
+        }
+        
+        const candidateData = {
+          firstName: row.getCell(1).value?.toString().trim() || '',
+          lastName: row.getCell(2).value?.toString().trim() || '',
+          email: row.getCell(3).value?.toString().trim() || '',
+          mobile: row.getCell(4).value?.toString().trim() || '',
+          experience: row.getCell(5).value?.toString().trim() || '0',
+          skills: row.getCell(6).value?.toString().trim() || '',
+          education: row.getCell(7).value?.toString().trim() || '',
+          availableToJoin: parseInt(row.getCell(8).value) || 0,
+          currentLocation: row.getCell(9).value?.toString().trim() || '',
+          preferredLocation: row.getCell(10).value?.toString().trim() || '',
+          source: row.getCell(11).value?.toString().trim() || '',
+          gender: row.getCell(12).value?.toString().trim() || '',
+          dob: row.getCell(13).value ? new Date(row.getCell(13).value) : null,
+          stage: 'Sourced', // Default stage
+          tenantId,
+          createdBy: userId,
+          owner: userId,
+          jobId: jobId || null
+        };
+        
+        // Validate required fields
+        if (!candidateData.firstName || !candidateData.lastName || !candidateData.email) {
+          errors.push(`Row ${i}: Missing required fields (first name, last name, or email)`);
+          continue;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(candidateData.email)) {
+          errors.push(`Row ${i}: Invalid email format - ${candidateData.email}`);
+          continue;
+        }
+        
+        // Validate mobile format
+        const mobileRegex = /^[0-9]{10,15}$/;
+        if (candidateData.mobile && !mobileRegex.test(candidateData.mobile)) {
+          errors.push(`Row ${i}: Invalid mobile number format - ${candidateData.mobile}`);
+          continue;
+        }
+        
+        // Convert location names to ObjectIds
+        if (candidateData.currentLocation) {
+          const location = locations.find(loc => 
+            loc.name.toLowerCase() === candidateData.currentLocation.toLowerCase()
+          );
+          if (location) {
+            candidateData.currentLocation = location._id;
+          } else {
+            errors.push(`Row ${i}: Invalid current location - ${candidateData.currentLocation}`);
+            continue;
+          }
+        }
+        
+        if (candidateData.preferredLocation) {
+          const location = locations.find(loc => 
+            loc.name.toLowerCase() === candidateData.preferredLocation.toLowerCase()
+          );
+          if (location) {
+            candidateData.preferredLocation = location._id;
+          } else {
+            errors.push(`Row ${i}: Invalid preferred location - ${candidateData.preferredLocation}`);
+            continue;
+          }
+        }
+        
+        // Convert source name to ObjectId
+        if (candidateData.source) {
+          const source = sources.find(src => 
+            src.name.toLowerCase() === candidateData.source.toLowerCase()
+          );
+          if (source) {
+            candidateData.source = source._id;
+          } else {
+            errors.push(`Row ${i}: Invalid source - ${candidateData.source}`);
+            continue;
+          }
+        }
+        
+        // Validate gender
+        const validGenders = ['Male', 'Female', 'Other', 'Prefer not to say', ''];
+        if (candidateData.gender && !validGenders.includes(candidateData.gender)) {
+          errors.push(`Row ${i}: Invalid gender - must be one of: ${validGenders.join(', ')}`);
+          continue;
+        }
+        
+        // Validate stage if provided
+        if (candidateData.stage && !stageNames.includes(candidateData.stage)) {
+          errors.push(`Row ${i}: Invalid stage - must be one of: ${stageNames.join(', ')}`);
+          continue;
+        }
+        
+        candidates.push(candidateData);
+        
+      } catch (rowError) {
+        errors.push(`Row ${i}: Error processing row - ${rowError.message}`);
+      }
+    }
+    
+    if (candidates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid candidate data found in the file',
+        details: errors
+      });
+    }
+    
+    // Process candidates
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+    
+    // Process candidates sequentially to avoid overwhelming the database
+    for (const candidateData of candidates) {
+      try {
+        // Check for duplicate email
+        const existingCandidate = await Candidate.findOne({
+          email: candidateData.email,
+          tenantId
+        });
+        
+        if (existingCandidate) {
+          results.failed++;
+          results.errors.push(`Email ${candidateData.email} already exists`);
+          continue;
+        }
+        
+        // Create candidate
+        const candidate = new Candidate(candidateData);
+        await candidate.save();
+        results.success++;
+        
+      } catch (error) {
+        results.failed++;
+        let errorMessage = `Failed to create candidate ${candidateData.email}`;
+        
+        if (error.code === 11000) {
+          errorMessage = `Duplicate email found: ${candidateData.email}`;
+        } else if (error.name === 'ValidationError') {
+          errorMessage = `Validation error for ${candidateData.email}: ${Object.values(error.errors).map(e => e.message).join(', ')}`;
+        } else {
+          errorMessage += `: ${error.message}`;
+        }
+        
+        results.errors.push(errorMessage);
+      }
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Processed ${candidates.length} candidate(s)`,
+      results: {
+        total: candidates.length,
+        successful: results.success,
+        failed: results.failed,
+        errors: results.errors
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in bulk upload:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to process bulk upload'
+    });
+  }
+};
+
 module.exports = {
   createCandidate,
   getAllCandidates,
@@ -1096,5 +1511,7 @@ module.exports = {
   analyzeResume,
   previewResume,
   downloadResume,
-  updateCandidateStage
+  updateCandidateStage,
+  downloadTemplate,
+  bulkUploadCandidates
 };

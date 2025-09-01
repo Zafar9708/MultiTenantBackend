@@ -587,6 +587,7 @@ exports.login = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
+          name:user.username,
           email: user.email,
           role: user.role,
           tenantId: user.tenantId,
@@ -709,7 +710,9 @@ exports.validateFirstLoginToken = async (req, res, next) => {
 
 exports.getUserDetails = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select('-password -__v');
+    console.log(req.user)
+    const user = await Tenant.findById(req.user.Id).select('-password -__v');
+    console.log(user)
     
     if (!user) {
       return next(new AppError('User not found', 404));

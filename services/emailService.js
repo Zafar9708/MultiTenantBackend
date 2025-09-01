@@ -247,9 +247,76 @@ const sendFeedbackEmail = async (to, interview, feedback, interviewer) => {
   }
 };
 
+const sendRecruiterAssignmentEmail = async (email, data) => {
+  const { jobName, jobTitle, department, experience, recruiterName, creatorName, jobDescription } = data;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; }
+        .header { background-color: #4e54c8; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { padding: 20px; }
+        .job-details { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #888; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #4e54c8; color: white; text-decoration: none; border-radius: 5px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>New Job Assignment</h2>
+        </div>
+        <div class="content">
+          <p>Hello ${recruiterName},</p>
+          <p>You have been assigned to a new job posting by ${creatorName}.</p>
+          
+          <div class="job-details">
+            <h3>Job Details:</h3>
+            <p><strong>Job ID:</strong> ${jobName}</p>
+            <p><strong>Job Title:</strong> ${jobTitle}</p>
+            <p><strong>Department:</strong> ${department}</p>
+            <p><strong>Experience Required:</strong> ${experience}</p>
+            <p><strong>Job Description:</strong><br>${jobDescription}</p>
+          </div>
+          
+          <p>Please log in to your account to view complete details and start managing applications for this position.</p>
+          
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${process.env.FRONTEND_URL}/login" class="button">Login to Dashboard</a>
+          </div>
+          
+          <p>If you have any questions, please contact your administrator.</p>
+        </div>
+        <div class="footer">
+          <p>This is an automated message. Please do not reply to this email.</p>
+          <p>© ${new Date().getFullYear()} HireOnboard. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  try {
+    await sendEmail({
+      email,
+      subject: `New Job Assignment: ${jobTitle}`,
+      html
+    });
+    console.log(`Recruiter assignment email sent to: ${email}`);
+  } catch (error) {
+    console.error(`Failed to send recruiter assignment email to ${email}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendJobAssignmentEmail,
   sendSalesPersonNotification,
   sendInterviewEmail,
-  sendFeedbackEmail
+  sendFeedbackEmail,
+  sendRecruiterAssignmentEmail
 };

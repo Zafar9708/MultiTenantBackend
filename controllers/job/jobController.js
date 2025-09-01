@@ -31,7 +31,7 @@ const getJobTemplates = (req, res) => {
 
 const postJob = async (req, res) => {
     try {
-        const { tenantId, _id: userId } = req.user;
+        const { tenantId, _id: userId, role } = req.user;
         const { 
             jobTitle, 
             department, 
@@ -50,10 +50,15 @@ const postJob = async (req, res) => {
             BusinessUnit, 
             Client, 
             salesPerson,
-            recruitingPerson 
+            recruitingPerson,
+            assignedRecruiters 
         } = req.body;
 
         // Validate required fields
+        if (!jobTitle || !department || !experience || !jobDesc) {
+            return res.status(400).json({ error: 'Job title, department, experience, and description are required' });
+        }
+
         if (!locations || locations.length === 0) {
             return res.status(400).json({ error: 'At least one location is required' });
         }
@@ -72,20 +77,27 @@ const postJob = async (req, res) => {
             return res.status(400).json({ error: "Invalid locations or locations not belonging to your tenant" });
         }
 
-        // Verify client belongs to the tenant (if external)
-        if (BusinessUnit === 'external' && Client) {
-            if (!mongoose.Types.ObjectId.isValid(Client)) {
-                return res.status(400).json({ error: "Invalid client ID format" });
-            }
+        // Handle recruiter assignment based on user role
+        let finalAssignedRecruiters = [];
 
-            // const existingClient = await ClientModel.findOne({
-            //     _id: Client,
-            //     tenantId
-            // });
-            
-            // if (!existingClient) {
-            //     return res.status(400).json({ error: "Client not found in your tenant" });
-            // }
+        if (role === 'admin') {
+            // Admin can assign to specific recruiters
+            if (assignedRecruiters && assignedRecruiters.length > 0) {
+                // Verify assigned recruiters belong to the tenant
+                const existingRecruiters = await User.find({ 
+                    _id: { $in: assignedRecruiters },
+                    tenantId,
+                    role: 'recruiter'
+                });
+                
+                if (existingRecruiters.length !== assignedRecruiters.length) {
+                    return res.status(400).json({ error: "Invalid recruiters or recruiters not belonging to your tenant" });
+                }
+                finalAssignedRecruiters = assignedRecruiters;
+            }
+        } else if (role === 'recruiter') {
+            // Recruiters are automatically assigned to themselves
+            finalAssignedRecruiters = [userId];
         }
 
         // Initialize salesPersonDetails
@@ -116,7 +128,8 @@ const postJob = async (req, res) => {
             experience,
             jobDesc,
             userId,
-            tenantId
+            tenantId,
+            assignedRecruiters: finalAssignedRecruiters
         });
 
         // Create job form with tenant
@@ -150,11 +163,11 @@ const postJob = async (req, res) => {
         savedJob.jobFormId = savedJobForm._id;
         await savedJob.save();
 
-        // Populate response - FIXED: Added Client population
+        // Populate response
         const populatedJobForm = await JobForm.findById(savedJobForm._id)
             .populate('locations', 'name')
             .populate('salesPerson', 'name email')
-            .populate('Client', 'name'); // Add this line to populate Client
+            .populate('Client', 'name');
 
         const responseJob = {
             ...savedJob.toObject(),
@@ -180,6 +193,33 @@ const postJob = async (req, res) => {
             }
         }
 
+        // Send notifications to assigned recruiters
+        if (finalAssignedRecruiters && finalAssignedRecruiters.length > 0) {
+            try {
+                const creator = await User.findById(userId).select('name');
+                const recruiters = await User.find({ 
+                    _id: { $in: finalAssignedRecruiters } 
+                }).select('email username');
+                
+                for (const recruiter of recruiters) {
+                    await sendRecruiterAssignmentEmail(
+                        recruiter.email,
+                        {
+                            jobName: savedJob.jobName,
+                            jobTitle: savedJob.jobTitle,
+                            department: savedJob.department,
+                            experience: savedJob.experience,
+                            recruiterName: recruiter.username || recruiter.email,
+                            creatorName: creator.name,
+                            jobDescription: savedJob.jobDesc
+                        }
+                    );
+                }
+            } catch (emailError) {
+                console.error('Failed to send recruiter assignment notifications:', emailError);
+            }
+        }
+
         res.status(201).json({
             message: 'Job created successfully',
             job: responseJob
@@ -187,7 +227,7 @@ const postJob = async (req, res) => {
 
     } catch (error) {
         console.error('Error creating job:', error);
-        res.status(500).json({ error: 'Failed to create job' });
+        res.status(500).json({ error: 'Failed to create job', details: error.message });
     }
 };
 
@@ -336,6 +376,7 @@ const updateJob = async (req, res) => {
     try {
         const { id } = req.params;
         const { tenantId } = req.user;
+        const { assignedRecruiters } = req.body;
 
         const job = await Job.findOne({ 
             _id: id,
@@ -346,12 +387,26 @@ const updateJob = async (req, res) => {
             return res.status(404).json({ error: "Job not found or not accessible" });
         }
 
+        // Verify assigned recruiters belong to the tenant
+        if (assignedRecruiters && assignedRecruiters.length > 0) {
+            const existingRecruiters = await User.find({ 
+                _id: { $in: assignedRecruiters },
+                tenantId,
+                role: 'recruiter'
+            });
+            
+            if (existingRecruiters.length !== assignedRecruiters.length) {
+                return res.status(400).json({ error: "Invalid recruiters or recruiters not belonging to your tenant" });
+            }
+        }
+
         // Update basic job info
         const { jobTitle, department, experience, jobDesc } = req.body;
         if (jobTitle) job.jobTitle = jobTitle;
         if (department) job.department = department;
         if (experience) job.experience = experience;
         if (jobDesc) job.jobDesc = jobDesc;
+        if (assignedRecruiters) job.assignedRecruiters = assignedRecruiters;
 
         // Update job form
         const {
@@ -416,6 +471,33 @@ const updateJob = async (req, res) => {
                 }
             } catch (emailError) {
                 console.error('Failed to send salesperson notification:', emailError);
+            }
+        }
+
+        // Send notifications to newly assigned recruiters
+        if (assignedRecruiters && assignedRecruiters.length > 0) {
+            try {
+                const creator = await User.findById(req.user._id).select('name');
+                const recruiters = await User.find({ 
+                    _id: { $in: assignedRecruiters } 
+                }).select('email username');
+                
+                for (const recruiter of recruiters) {
+                    await sendRecruiterAssignmentEmail(
+                        recruiter.email,
+                        {
+                            jobName: job.jobName,
+                            jobTitle: job.jobTitle,
+                            department: job.department,
+                            experience: job.experience,
+                            recruiterName: recruiter.username,
+                            creatorName: creator.name,
+                            jobDescription: job.jobDesc
+                        }
+                    );
+                }
+            } catch (emailError) {
+                console.error('Failed to send recruiter assignment notifications:', emailError);
             }
         }
 

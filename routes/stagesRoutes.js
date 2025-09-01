@@ -3,9 +3,10 @@ const router = express.Router();
 const Stage = require('../models/Stages');
 const {authorize} = require('../middleware/auth');
 const { stages: stageOptions } = require('../utils/stages');
+const stageController=require('../controllers/stagesController')
 
 // Get all stages (fixed enum order)
-router.get('/', async (req, res) => {
+router.get('/all', async (req, res) => {
   const stageDocs = await Stage.find().sort({ order: 1 });
   res.json(stageDocs);
 });
@@ -23,7 +24,6 @@ router.get('/rejection-types', async (req, res) => {
 
 // Add custom rejection type (admin/recruiter only)
 router.post('/rejection-types', 
-  authorize('admin', 'recruiter'),
   async (req, res) => {
     try {
       const { type } = req.body;
@@ -44,5 +44,7 @@ router.post('/rejection-types',
       res.status(500).json({ error: 'Failed to add rejection type' });
     }
 });
+
+router.put('/move/:id',stageController.moveCandidateStage)
 
 module.exports = router;

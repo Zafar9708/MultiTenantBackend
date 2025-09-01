@@ -23,6 +23,7 @@ const candidateNotesRoutes = require('./routes/candidateNotesRoutes');
 const interviewerRoutes = require('./routes/interviewerRoutes');
 const emailTemplateRoutes = require('./routes/emailTemplate');
 const interviewRoutes = require('./routes/interviewRoutes');
+const chatBoatRoutes = require('./routes/chatBoatRoutes');
 
 const app = express();
 app.use(cors());
@@ -67,7 +68,8 @@ app.use('/api/v1/candidates',candidateRoutes)
 app.use('/api/v1/candidatesnotes',candidateNotesRoutes)
 app.use('/api/v1/interviewers',interviewerRoutes)
 app.use('/api/v1/email-templates',emailTemplateRoutes);
-app.use('/api/v1/interviews',interviewRoutes)
+app.use('/api/v1/interviews',interviewRoutes);
+app.use('/api/v1/chatboat',chatBoatRoutes)
 
 
 
