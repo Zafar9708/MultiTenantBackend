@@ -10,12 +10,16 @@ console.log("ENV Variables:", {
   DATABASE_URI: process.env.DATABASE_URI ? "******" : "MISSING"
 });
 
+app.get('/',(req,res)=>{
+  res.send('Hello ,Node Js Server is Working')
+})
+
 mongoose.connect(process.env.DATABASE_URI)
   .then(() => {
     console.log("Database connected");
     
     const PORT = process.env.PORT || 5000;
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT,'0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
       logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });

@@ -8,6 +8,7 @@ const candidateSchema = new mongoose.Schema({
   lastName: { type: String, required: [true, 'Last name is required'] },
   email: { 
     type: String, 
+    sparse: true,
     required: [true, 'Email is required'],
     validate: {
       validator: function(v) {

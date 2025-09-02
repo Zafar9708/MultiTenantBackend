@@ -17,6 +17,7 @@ const resumeSchema = new mongoose.Schema({
   },
   email: {
     type: String,
+    sparse: true,
     trim: true,
     lowercase: true,
     validate: {
@@ -135,7 +136,7 @@ resumeSchema.virtual('fullName').get(function() {
 
 // Indexes
 resumeSchema.index({ email: 1, tenantId: 1 }, { 
-  unique: true, 
+  // sparse: true, 
   sparse: true,
   partialFilterExpression: { 
     email: { $type: "string", $ne: "" } 

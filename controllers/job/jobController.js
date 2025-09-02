@@ -18,6 +18,8 @@ const generateJobName = async (tenantId) => {
     return `${prefix}${String(jobCount + 1).padStart(3, '0')}`;
 };
 
+
+
 // Get job templates
 const getJobTemplates = (req, res) => {
     try {
