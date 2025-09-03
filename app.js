@@ -46,10 +46,21 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin: 'http://localhost:5173', 
-  credentials: true
-}));
+// app.use(cors({
+//   origin: 'http://localhost:5173', 
+//   credentials: true
+// }));
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",   // local frontend
+      "https://wrocusats.vercel.app", // deployed frontend
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tenants', tenantRoutes);
