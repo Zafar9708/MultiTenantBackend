@@ -1087,6 +1087,147 @@ function getContentType(fileExt) {
   return contentTypes[fileExt] || null;
 }
 
+// const downloadTemplate = async (req, res) => {
+//   try {
+//     const { tenantId } = req.user;
+    
+//     // Create workbook
+//     const workbook = new ExcelJS.Workbook();
+//     const worksheet = workbook.addWorksheet('Candidates Template');
+    
+//     // Add headers
+//     worksheet.columns = [
+//       { header: 'First Name*', key: 'firstName', width: 20 },
+//       { header: 'Last Name*', key: 'lastName', width: 20 },
+//       { header: 'Email*', key: 'email', width: 30 },
+//       { header: 'Mobile*', key: 'mobile', width: 15 },
+//       { header: 'Experience (years)', key: 'experience', width: 15 },
+//       { header: 'Skills (comma separated)', key: 'skills', width: 30 },
+//       { header: 'Education', key: 'education', width: 25 },
+//       { header: 'Available to Join (days)', key: 'availableToJoin', width: 20 },
+//       { header: 'Current Location', key: 'currentLocation', width: 20 },
+//       { header: 'Preferred Location', key: 'preferredLocation', width: 20 },
+//       { header: 'Source', key: 'source', width: 20 },
+//       { header: 'Gender', key: 'gender', width: 10 },
+//       { header: 'Date of Birth (YYYY-MM-DD)', key: 'dob', width: 15 }
+//     ];
+    
+//     // Add sample data row
+//     const sampleRow = worksheet.addRow({
+//       firstName: 'John',
+//       lastName: 'Doe',
+//       email: 'john.doe@example.com',
+//       mobile: '1234567890',
+//       experience: '5',
+//       skills: 'JavaScript, React, Node.js',
+//       education: 'Bachelor of Engineering',
+//       availableToJoin: '30',
+//       currentLocation: 'Chennai',
+//       preferredLocation: 'Bangalore',
+//       source: 'LinkedIn',
+//       gender: 'Male',
+//       dob: '1990-01-01'
+//     });
+    
+//     // Style the header row
+//     worksheet.getRow(1).eachCell((cell) => {
+//       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FF0070C0' } // Blue background
+//       };
+//       cell.alignment = { vertical: 'middle', horizontal: 'center' };
+//       cell.border = {
+//         top: { style: 'thin' },
+//         left: { style: 'thin' },
+//         bottom: { style: 'thin' },
+//         right: { style: 'thin' }
+//       };
+//     });
+    
+//     // Style the sample row
+//     sampleRow.eachCell((cell) => {
+//       cell.font = { italic: true };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FFF2F2F2' } // Light gray background
+//       };
+//     });
+    
+//     // Add data validation for gender
+//     worksheet.dataValidations.add('M2:M1000', {
+//       type: 'list',
+//       allowBlank: true,
+//       formulae: ['"Male,Female,Other,Prefer not to say"']
+//     });
+    
+//     // Add instructions worksheet
+//     const instructionsSheet = workbook.addWorksheet('Instructions');
+    
+//     instructionsSheet.columns = [
+//       { header: 'Field', key: 'field', width: 20 },
+//       { header: 'Description', key: 'description', width: 40 },
+//       { header: 'Required', key: 'required', width: 10 },
+//       { header: 'Example', key: 'example', width: 20 }
+//     ];
+    
+//     const instructions = [
+//       { field: 'First Name', description: 'Candidate first name', required: 'Yes', example: 'John' },
+//       { field: 'Last Name', description: 'Candidate last name', required: 'Yes', example: 'Doe' },
+//       { field: 'Email', description: 'Valid email address', required: 'Yes', example: 'john@example.com' },
+//       { field: 'Mobile', description: 'Phone number (10-15 digits)', required: 'Yes', example: '1234567890' },
+//       { field: 'Experience', description: 'Years of experience', required: 'No', example: '5' },
+//       { field: 'Skills', description: 'Comma-separated skills', required: 'No', example: 'JavaScript, React' },
+//       { field: 'Education', description: 'Highest education', required: 'No', example: 'Bachelor of Engineering' },
+//       { field: 'Available to Join', description: 'Days until available', required: 'No', example: '30' },
+//       { field: 'Current Location', description: 'Current city', required: 'No', example: 'Chennai' },
+//       { field: 'Preferred Location', description: 'Preferred work city', required: 'No', example: 'Bangalore' },
+//       { field: 'Source', description: 'How candidate was found', required: 'No', example: 'LinkedIn' },
+//       { field: 'Gender', description: 'Use dropdown options', required: 'No', example: 'Male' },
+//       { field: 'Date of Birth', description: 'YYYY-MM-DD format', required: 'No', example: '1990-01-01' }
+//     ];
+    
+//     instructions.forEach(instruction => {
+//       instructionsSheet.addRow(instruction);
+//     });
+    
+//     // Style instructions sheet header
+//     instructionsSheet.getRow(1).eachCell((cell) => {
+//       cell.font = { bold: true };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FFE6E6E6' }
+//       };
+//     });
+    
+//     // Freeze header rows
+//     worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+//     instructionsSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    
+//     // Set response headers
+//     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//     res.setHeader('Content-Disposition', 'attachment; filename=candidate_upload_template.xlsx');
+//     res.setHeader('Content-Transfer-Encoding', 'binary');
+//     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+//     res.setHeader('Pragma', 'no-cache');
+//     res.setHeader('Expires', '0');
+    
+//     // Write to response
+//     await workbook.xlsx.write(res);
+//     res.end();
+    
+//   } catch (error) {
+//     console.error('Error generating template:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Failed to generate template'
+//     });
+//   }
+// };
+
 const downloadTemplate = async (req, res) => {
   try {
     const { tenantId } = req.user;
@@ -1207,7 +1348,7 @@ const downloadTemplate = async (req, res) => {
     worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
     instructionsSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
     
-    // Set response headers
+    // Set response headers - FIXED: Use proper content type and headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=candidate_upload_template.xlsx');
     res.setHeader('Content-Transfer-Encoding', 'binary');
@@ -1215,8 +1356,10 @@ const downloadTemplate = async (req, res) => {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // Write to response
+    // Write to response - FIXED: Use proper write method
     await workbook.xlsx.write(res);
+    
+    // End the response after writing the file
     res.end();
     
   } catch (error) {
@@ -1251,8 +1394,8 @@ const bulkUploadCandidates = async (req, res) => {
       });
     }
     
-    // Validate file type (additional check)
-    const allowedExtensions = ['.xls', '.xlsx', '.xlsm', '.xltm'];
+    // Validate file type
+    const allowedExtensions = ['.xls', '.xlsx'];
     const fileExtension = path.extname(file.originalname).toLowerCase();
     
     if (!allowedExtensions.includes(fileExtension)) {
@@ -1262,33 +1405,14 @@ const bulkUploadCandidates = async (req, res) => {
       });
     }
     
-    // Load ExcelJS dynamically to avoid dependency issues
-    let ExcelJS;
-    try {
-      ExcelJS = require('exceljs');
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Excel processing module not available. Please contact administrator.'
-      });
-    }
+    // Load ExcelJS
+    const ExcelJS = require('exceljs');
     
     // Process Excel file
     const workbook = new ExcelJS.Workbook();
     
     try {
-      if (fileExtension === '.xlsx') {
-        await workbook.xlsx.load(file.buffer);
-      } else if (fileExtension === '.xls') {
-        // For .xls files, you might need a different approach
-        // or use a library like xlsx instead
-        return res.status(400).json({
-          success: false,
-          error: '.xls files are not supported. Please use .xlsx format.'
-        });
-      } else {
-        await workbook.xlsx.load(file.buffer);
-      }
+      await workbook.xlsx.load(file.buffer);
     } catch (excelError) {
       console.error('Excel parsing error:', excelError);
       return res.status(400).json({
@@ -1308,16 +1432,12 @@ const bulkUploadCandidates = async (req, res) => {
     const candidates = [];
     const errors = [];
     
-    // Get locations and sources for validation
+    // Get locations, sources, and stages for validation and ID lookup
     const [locations, sources, stages] = await Promise.all([
-      Location.find({ tenantId }).select('name'),
-      Source.find({ tenantId }).select('name'),
-      mongoose.model('Stage').find({}).select('name') // Get all stages
+      Location.find({ tenantId }).select('name _id'),
+      Source.find({ tenantId }).select('name _id'),
+      mongoose.model('Stage').find({}).select('name _id') // Get all stages (not tenant-specific)
     ]);
-    
-    const locationNames = locations.map(loc => loc.name);
-    const sourceNames = sources.map(src => src.name);
-    const stageNames = stages.map(stage => stage.name);
     
     // Process rows (skip header row)
     for (let i = 2; i <= worksheet.rowCount; i++) {
@@ -1325,25 +1445,59 @@ const bulkUploadCandidates = async (req, res) => {
         const row = worksheet.getRow(i);
         
         // Skip empty rows
-        if (!row.getCell(1).value || !row.getCell(1).value.toString().trim()) {
+        const firstNameCell = row.getCell(1);
+        if (!firstNameCell || !firstNameCell.value || firstNameCell.value.toString().trim() === '') {
           continue;
         }
         
+        // Helper function to extract cell value safely
+        const getCellValue = (cell) => {
+          if (!cell || cell.value === null || cell.value === undefined) {
+            return '';
+          }
+          
+          // Handle different cell value types
+          if (typeof cell.value === 'object') {
+            // Check if it's a formula cell with result
+            if (cell.value.result !== undefined) {
+              return cell.value.result.toString().trim();
+            }
+            // Check if it's a rich text object
+            if (cell.value.richText) {
+              return cell.value.richText.map(rt => rt.text).join('').trim();
+            }
+            // Check if it's a hyperlink
+            if (cell.value.text !== undefined) {
+              return cell.value.text.toString().trim();
+            }
+            // For other object types, try to stringify or get text
+            if (cell.value.text) {
+              return cell.value.text.toString().trim();
+            }
+            // Last resort: string representation
+            return cell.value.toString().trim();
+          }
+          
+          // For primitive types
+          return cell.value.toString().trim();
+        };
+        
+        // Extract values
         const candidateData = {
-          firstName: row.getCell(1).value?.toString().trim() || '',
-          lastName: row.getCell(2).value?.toString().trim() || '',
-          email: row.getCell(3).value?.toString().trim() || '',
-          mobile: row.getCell(4).value?.toString().trim() || '',
-          experience: row.getCell(5).value?.toString().trim() || '0',
-          skills: row.getCell(6).value?.toString().trim() || '',
-          education: row.getCell(7).value?.toString().trim() || '',
-          availableToJoin: parseInt(row.getCell(8).value) || 0,
-          currentLocation: row.getCell(9).value?.toString().trim() || '',
-          preferredLocation: row.getCell(10).value?.toString().trim() || '',
-          source: row.getCell(11).value?.toString().trim() || '',
-          gender: row.getCell(12).value?.toString().trim() || '',
-          dob: row.getCell(13).value ? new Date(row.getCell(13).value) : null,
-          stage: 'Sourced', // Default stage
+          firstName: getCellValue(row.getCell(1)),
+          lastName: getCellValue(row.getCell(2)),
+          email: getCellValue(row.getCell(3)),
+          mobile: getCellValue(row.getCell(4)),
+          experience: getCellValue(row.getCell(5)) || '0',
+          skills: getCellValue(row.getCell(6)),
+          education: getCellValue(row.getCell(7)),
+          availableToJoin: parseInt(getCellValue(row.getCell(8))) || 0,
+          currentLocation: getCellValue(row.getCell(9)),
+          preferredLocation: getCellValue(row.getCell(10)),
+          source: getCellValue(row.getCell(11)),
+          gender: getCellValue(row.getCell(12)),
+          dob: getCellValue(row.getCell(13)) ? new Date(getCellValue(row.getCell(13))) : null,
+          stage: 'Sourced',
           tenantId,
           createdBy: userId,
           owner: userId,
@@ -1363,70 +1517,134 @@ const bulkUploadCandidates = async (req, res) => {
           continue;
         }
         
-        // Validate mobile format
-        const mobileRegex = /^[0-9]{10,15}$/;
-        if (candidateData.mobile && !mobileRegex.test(candidateData.mobile)) {
-          errors.push(`Row ${i}: Invalid mobile number format - ${candidateData.mobile}`);
-          continue;
-        }
-        
-        // Convert location names to ObjectIds
-        if (candidateData.currentLocation) {
-          const location = locations.find(loc => 
+        // Convert location names to ObjectIds - CREATE IF NOT EXISTS
+        if (candidateData.currentLocation && candidateData.currentLocation.trim() !== '') {
+          let location = locations.find(loc => 
             loc.name.toLowerCase() === candidateData.currentLocation.toLowerCase()
           );
-          if (location) {
-            candidateData.currentLocation = location._id;
-          } else {
-            errors.push(`Row ${i}: Invalid current location - ${candidateData.currentLocation}`);
-            continue;
+          
+          if (!location) {
+            // Create new location if it doesn't exist
+            try {
+              location = new Location({
+                name: candidateData.currentLocation,
+                tenantId
+              });
+              await location.save();
+              locations.push(location); // Add to cache for subsequent rows
+            } catch (createError) {
+              errors.push(`Row ${i}: Failed to create location - ${candidateData.currentLocation}`);
+              continue;
+            }
           }
+          
+          candidateData.currentLocation = location._id;
+        } else {
+          candidateData.currentLocation = undefined;
         }
         
-        if (candidateData.preferredLocation) {
-          const location = locations.find(loc => 
+        if (candidateData.preferredLocation && candidateData.preferredLocation.trim() !== '') {
+          let location = locations.find(loc => 
             loc.name.toLowerCase() === candidateData.preferredLocation.toLowerCase()
           );
-          if (location) {
-            candidateData.preferredLocation = location._id;
-          } else {
-            errors.push(`Row ${i}: Invalid preferred location - ${candidateData.preferredLocation}`);
-            continue;
+          
+          if (!location) {
+            // Create new location if it doesn't exist
+            try {
+              location = new Location({
+                name: candidateData.preferredLocation,
+                tenantId
+              });
+              await location.save();
+              locations.push(location); // Add to cache for subsequent rows
+            } catch (createError) {
+              errors.push(`Row ${i}: Failed to create location - ${candidateData.preferredLocation}`);
+              continue;
+            }
           }
+          
+          candidateData.preferredLocation = location._id;
+        } else {
+          candidateData.preferredLocation = undefined;
         }
         
-        // Convert source name to ObjectId
-        if (candidateData.source) {
-          const source = sources.find(src => 
+        // Convert source name to ObjectId - CREATE IF NOT EXISTS
+        if (candidateData.source && candidateData.source.trim() !== '') {
+          let source = sources.find(src => 
             src.name.toLowerCase() === candidateData.source.toLowerCase()
           );
-          if (source) {
-            candidateData.source = source._id;
+          
+          if (!source) {
+            // Create new source if it doesn't exist
+            try {
+              source = new Source({
+                name: candidateData.source,
+                tenantId
+              });
+              await source.save();
+              sources.push(source); // Add to cache for subsequent rows
+            } catch (createError) {
+              errors.push(`Row ${i}: Failed to create source - ${candidateData.source}`);
+              continue;
+            }
+          }
+          
+          candidateData.source = source._id;
+        } else {
+          errors.push(`Row ${i}: Source is required`);
+          continue;
+        }
+        
+        // Convert stage name to ObjectId
+        if (candidateData.stage && candidateData.stage.trim() !== '') {
+          const stage = stages.find(st => 
+            st.name.toLowerCase() === candidateData.stage.toLowerCase()
+          );
+          
+          if (stage) {
+            candidateData.stage = stage._id;
           } else {
-            errors.push(`Row ${i}: Invalid source - ${candidateData.source}`);
+            errors.push(`Row ${i}: Invalid stage - ${candidateData.stage}`);
+            continue;
+          }
+        } else {
+          // Set default stage if not provided
+          const defaultStage = stages.find(st => st.name.toLowerCase() === 'sourced');
+          if (defaultStage) {
+            candidateData.stage = defaultStage._id;
+          } else {
+            errors.push(`Row ${i}: Default stage 'Sourced' not found in database`);
             continue;
           }
         }
         
-        // Validate gender
-        const validGenders = ['Male', 'Female', 'Other', 'Prefer not to say', ''];
-        if (candidateData.gender && !validGenders.includes(candidateData.gender)) {
-          errors.push(`Row ${i}: Invalid gender - must be one of: ${validGenders.join(', ')}`);
+        // Validate mobile format (if provided)
+        if (candidateData.mobile && candidateData.mobile.trim() !== '') {
+          const mobileRegex = /^[0-9]{10,15}$/;
+          const cleanMobile = candidateData.mobile.replace(/\D/g, '');
+          if (!mobileRegex.test(cleanMobile)) {
+            errors.push(`Row ${i}: Invalid mobile number format - ${candidateData.mobile}`);
+            continue;
+          }
+          candidateData.mobile = cleanMobile;
+        } else {
+          errors.push(`Row ${i}: Mobile number is required`);
           continue;
         }
         
-        // Validate stage if provided
-        if (candidateData.stage && !stageNames.includes(candidateData.stage)) {
-          errors.push(`Row ${i}: Invalid stage - must be one of: ${stageNames.join(', ')}`);
-          continue;
-        }
+        // Parse experience as float
+        candidateData.experience = parseFloat(candidateData.experience) || 0;
         
         candidates.push(candidateData);
         
       } catch (rowError) {
+        console.error(`Error processing row ${i}:`, rowError);
         errors.push(`Row ${i}: Error processing row - ${rowError.message}`);
       }
     }
+    
+    console.log(`Processed ${candidates.length} valid candidates`);
+    console.log(`Found ${errors.length} errors`);
     
     if (candidates.length === 0) {
       return res.status(400).json({
