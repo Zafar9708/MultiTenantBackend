@@ -1,12 +1,1827 @@
+// const mongoose = require('mongoose');
+// const ExcelJS=require('exceljs')
+// const Candidate = require('../models/Candidate');
+// const Resume = require('../models/Resume');
+// const Source = require('../models/Source');
+// const path = require('path');
+
+// const Location = require('../models/Location');
+// const { analyzeResumeWithPerplexity } = require('../services/perplexityMatchingService');
+// const { createNotification } = require('../services/notificationService');
+
+// const cloudinary = require('../config/cloudinary');
+// const mongoosePaginate = require('mongoose-paginate-v2');
+
+// // Create a new candidate
+// const createCandidate = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const data = req.body;
+//     const uploadedFile = req.file;
+
+//     // Check permissions - only admin and recruiter can add candidates
+//     if (!['admin', 'recruiter'].includes(role)) {
+//       return res.status(403).json({
+//         success: false,
+//         error: 'Only admins and recruiters can add candidates'
+//       });
+//     }
+
+//     // Validate required fields
+//     if (!data.source) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Source is required'
+//       });
+//     }
+
+//     // Validate references belong to the same tenant
+//     const [source, currentLoc, preferredLoc, job] = await Promise.all([
+//       Source.findOne({ _id: data.source, tenantId }),
+//       data.currentLocation ? Location.findOne({ _id: data.currentLocation, tenantId }) : null,
+//       data.preferredLocation ? Location.findOne({ _id: data.preferredLocation, tenantId }) : null,
+//       data.jobId ? mongoose.model('Job').findOne({ _id: data.jobId, tenantId }) : null
+//     ]);
+
+//     if (!source) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid source selected'
+//       });
+//     }
+
+//     if (data.currentLocation && !currentLoc) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid current location'
+//       });
+//     }
+
+//     if (data.preferredLocation && !preferredLoc) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid preferred location'
+//       });
+//     }
+
+//     if (data.jobId && !job) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid job selected'
+//       });
+//     }
+
+//     // Process resume if uploaded
+//     let resumeData = null;
+//     if (uploadedFile) {
+//       try {
+//         // Upload to Cloudinary
+//         const cloudinaryResult = await new Promise((resolve, reject) => {
+//           const uploadStream = cloudinary.uploader.upload_stream(
+//             {
+//               resource_type: "raw",
+//               folder: `tenants/${tenantId}/resumes`,
+//               public_id: `resume_${Date.now()}`,
+//               tags: ['resume']
+//             },
+//             (error, result) => {
+//               if (error) reject(error);
+//               else resolve(result);
+//             }
+//           );
+//           uploadStream.end(uploadedFile.buffer);
+//         });
+
+//         // Get job description for analysis
+//         const jobDescription = data.jobId 
+//           ? (await mongoose.model('Job').findById(data.jobId))?.jobDesc || ''
+//           : '';
+
+//         // Create basic resume data structure
+//         const resumePayload = {
+//           url: cloudinaryResult.secure_url,
+//           cloudinaryId: cloudinaryResult.public_id,
+//           fileType: uploadedFile.mimetype,
+//           originalName: uploadedFile.originalname,
+//           fileSize: uploadedFile.size,
+//           tenantId,
+//           userId,
+//           jobId: data.jobId,
+//           status: 'New'
+//         };
+
+//         // Only attempt analysis if we have a job description
+//         if (jobDescription) {
+//           try {
+//             const analysis = await analyzeResumeWithPerplexity(
+//               uploadedFile.buffer, 
+//               uploadedFile.mimetype,
+//               jobDescription
+//             );
+            
+//             // Add analysis data to payload
+//             resumePayload.aiAnalysis = analysis.aiAnalysis || {
+//               matchPercentage: 0,
+//               matchingSkills: [],
+//               missingSkills: [],
+//               recommendation: 'Analysis Completed',
+//               analysis: 'Resume analysis completed'
+//             };
+//             resumePayload.matchingScore = analysis.aiAnalysis?.matchPercentage || 0;
+//             resumePayload.status = determineStatus(analysis);
+            
+//             // Add extracted data if available
+//             if (analysis.extractedData) {
+//               resumePayload.skills = analysis.extractedData.skills || [];
+//               resumePayload.experience = analysis.extractedData.experience || '';
+//               resumePayload.education = analysis.extractedData.education || '';
+//             }
+//           } catch (analysisError) {
+//             console.error('Analysis error:', analysisError);
+//             // Continue with basic resume data
+//             resumePayload.aiAnalysis = {
+//               matchPercentage: 0,
+//               matchingSkills: [],
+//               missingSkills: [],
+//               recommendation: 'Analysis Failed',
+//               analysis: 'Could not analyze resume'
+//             };
+//           }
+//         }
+
+//         // Create resume record
+//         resumeData = await Resume.create(resumePayload);
+//         data.resume = resumeData._id;
+
+//       } catch (resumeError) {
+//         console.error('Resume processing error:', resumeError);
+//         return res.status(500).json({
+//           success: false,
+//           error: 'Failed to process resume',
+//           details: process.env.NODE_ENV === 'development' ? resumeError.message : undefined
+//         });
+//       }
+//     }
+
+//     // Create candidate
+//     const candidate = new Candidate({
+//       ...data,
+//       tenantId,
+//       userId,
+//       createdBy: userId,
+//       owner: userId
+//     });
+
+//     const savedCandidate = await candidate.save();
+
+//     // Update resume with candidate reference if created
+//     if (resumeData) {
+//       await Resume.findByIdAndUpdate(resumeData._id, {
+//         candidateId: savedCandidate._id
+//       });
+//     }
+
+
+//     // ADD NOTIFICATION CODE HERE - RIGHT AFTER CANDIDATE IS SAVED
+//     if (req.user.role === 'recruiter') {
+//       try {
+//         const jobTitle = data.jobId && job ? job.jobTitle : 'No Job Assigned';
+//         const notificationMessage = `Recruiter ${req.user.username} added a new candidate: ${data.firstName} ${data.lastName} for job: ${jobTitle}`;
+        
+//         // Get the Socket.io instance from the request
+//         const io = req.app.get('io');
+//         console.log('IO instance available:', !!io);
+        
+//         // Pass the io instance as the second parameter to createNotification
+//         await createNotification({
+//           type: 'candidate_created',
+//           message: notificationMessage,
+//           candidateId: savedCandidate._id,
+//           jobId: data.jobId || null,
+//           jobName: job ? job.jobName : 'No Job',
+//           performedBy: req.user._id,
+//           tenantId: req.user.tenantId
+//         }, io);
+        
+//         console.log('✓ Notification created successfully');
+//       } catch (notificationError) {
+//         console.error('Failed to create notification:', notificationError);
+//       }
+//     }
+//     // END OF NOTIFICATION CODE
+
+//     // Populate and return the created candidate
+//     const result = await Candidate.findById(savedCandidate._id)
+//       .populate({
+//         path: 'resume',
+//         populate: {
+//           path: 'jobId',
+//           select: 'jobTitle jobDesc'
+//         }
+//       })
+//       .populate('jobId')
+//       .populate('stage')
+//       .populate('currentLocation preferredLocation', 'name')
+//       .populate('source', 'name')
+//       .populate('owner', 'name email')
+//       .lean();
+
+//     // Add AI analysis to the response if available
+//     if (result.resume?.aiAnalysis) {
+//       result.aiAnalysis = result.resume.aiAnalysis;
+//     }
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Candidate created successfully",
+//       candidate: result
+//     });
+
+//   } catch (error) {
+//     console.error('Error creating candidate:', error);
+    
+//     // Handle duplicate key errors
+//     if (error.code === 11000) {
+//       const field = Object.keys(error.keyPattern)[0];
+//       return res.status(400).json({
+//         success: false,
+//         error: `Candidate with this ${field} already exists`
+//       });
+//     }
+
+//     // Handle validation errors
+//     if (error.name === 'ValidationError') {
+//       const messages = Object.values(error.errors).map(val => val.message);
+//       return res.status(400).json({
+//         success: false,
+//         error: messages.join(', ')
+//       });
+//     }
+
+//     res.status(500).json({ 
+//       success: false,
+//       error: error.message || 'Error creating candidate' 
+//     });
+//   }
+// };
+
+// // Get all candidates with role-based filtering
+// const getAllCandidates = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { page = 1, limit = 10, search, stage, source, jobId } = req.query;
+    
+//     const query = { tenantId };
+    
+//     // Recruiters can only see their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+//     // Admins see all candidates (no additional filter)
+    
+//     // Apply search filter
+//     if (search) {
+//       query.$or = [
+//         { firstName: { $regex: search, $options: 'i' } },
+//         { lastName: { $regex: search, $options: 'i' } },
+//         { email: { $regex: search, $options: 'i' } },
+//         { mobile: { $regex: search, $options: 'i' } }
+//       ];
+//     }
+    
+//     // Apply other filters
+//     if (stage) {
+//       query.stage = stage;
+//     }
+    
+//     if (source) {
+//       query.source = source;
+//     }
+    
+//     if (jobId) {
+//       query.jobId = jobId;
+//     }
+
+//     const options = {
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       sort: { createdAt: -1 },
+//       populate: [
+//         { path: 'stage', select: 'name' },
+//         { path: 'jobId', select: 'jobTitle' },
+//         { path: 'source', select: 'name' },
+//         { path: 'currentLocation preferredLocation', select: 'name' },
+//         { path: 'owner', select: 'name email' }
+//       ]
+//     };
+
+//     const candidates = await Candidate.paginate(query, options);
+
+//     res.status(200).json({
+//       success: true,
+//       count: candidates.totalDocs,
+//       page: candidates.page,
+//       pages: candidates.totalPages,
+//       candidates: candidates.docs
+//     });
+//   } catch (error) {
+//     console.error('Error fetching candidates:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error fetching candidates'
+//     });
+//   }
+// };
+
+// // Get candidate by ID with tenant and role check
+// const getCandidateById = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only access their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const candidate = await Candidate.findOne(query)
+//       .populate('stage', 'name')
+//       .populate('jobId', 'jobTitle')
+//       .populate('source', 'name')
+//       .populate('currentLocation preferredLocation', 'name')
+//       .populate('owner', 'name email')
+//       .populate('resume')
+//       .populate({
+//         path: 'comments.changedBy',
+//         select: 'name email'
+//       });
+
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       candidate
+//     });
+//   } catch (error) {
+//     console.error('Error fetching candidate:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error fetching candidate'
+//     });
+//   }
+// };
+
+// // Update candidate with role-based access control
+// const updateCandidate = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+//     const updates = req.body;
+//     const uploadedFile = req.file;
+
+//     // Base query with tenant check
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only update their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     // Check if candidate exists and is accessible
+//     const candidate = await Candidate.findOne(query);
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     // Validate references if provided
+//     if (updates.source) {
+//       const source = await Source.findOne({ _id: updates.source, tenantId });
+//       if (!source) {
+//         return res.status(400).json({
+//           success: false,
+//           error: 'Invalid source selected'
+//         });
+//       }
+//     }
+
+//     if (updates.currentLocation) {
+//       const location = await Location.findOne({ _id: updates.currentLocation, tenantId });
+//       if (!location) {
+//         return res.status(400).json({
+//           success: false,
+//           error: 'Invalid current location'
+//         });
+//       }
+//     }
+
+//     if (updates.preferredLocation) {
+//       const location = await Location.findOne({ _id: updates.preferredLocation, tenantId });
+//       if (!location) {
+//         return res.status(400).json({
+//           success: false,
+//           error: 'Invalid preferred location'
+//         });
+//       }
+//     }
+
+//     if (updates.jobId) {
+//       const job = await mongoose.model('Job').findOne({ _id: updates.jobId, tenantId });
+//       if (!job) {
+//         return res.status(400).json({
+//           success: false,
+//           error: 'Invalid job selected'
+//         });
+//       }
+//     }
+
+//     // Process resume if uploaded
+//     if (uploadedFile) {
+//       try {
+//         // Delete old resume if exists
+//         if (candidate.resume) {
+//           const oldResume = await Resume.findById(candidate.resume);
+//           if (oldResume) {
+//             await cloudinary.uploader.destroy(oldResume.cloudinaryId);
+//             await Resume.findByIdAndDelete(oldResume._id);
+//           }
+//         }
+
+//         // Upload new resume
+//         const cloudinaryResult = await new Promise((resolve, reject) => {
+//           const uploadStream = cloudinary.uploader.upload_stream(
+//             {
+//               resource_type: "raw",
+//               folder: `tenants/${tenantId}/resumes`,
+//               public_id: `resume_${Date.now()}`,
+//               tags: ['resume']
+//             },
+//             (error, result) => {
+//               if (error) reject(error);
+//               else resolve(result);
+//             }
+//           );
+//           uploadStream.end(uploadedFile.buffer);
+//         });
+
+//         // Get job description for analysis if job is specified
+//         const job = updates.jobId 
+//           ? await mongoose.model('Job').findOne({ _id: updates.jobId, tenantId })
+//           : candidate.jobId 
+//             ? await mongoose.model('Job').findById(candidate.jobId)
+//             : null;
+
+//         // Analyze with Perplexity
+//         const perplexityResult = await analyzeResumeWithPerplexity(
+//           uploadedFile.buffer,
+//           job?.jobDesc || ''
+//         );
+
+//         // Create new resume record
+//         const resumeData = await Resume.create({
+//           ...perplexityResult.extractedData,
+//           url: cloudinaryResult.secure_url,
+//           cloudinaryId: cloudinaryResult.public_id,
+//           fileType: uploadedFile.mimetype,
+//           originalName: uploadedFile.originalname,
+//           fileSize: uploadedFile.size,
+//           aiAnalysis: perplexityResult.aiAnalysis,
+//           matchingScore: perplexityResult.aiAnalysis.matchPercentage,
+//           status: perplexityResult.success ? 'Under Review' : 'Pending Review',
+//           tenantId,
+//           userId,
+//           jobId: updates.jobId || candidate.jobId
+//         });
+
+//         updates.resume = resumeData._id;
+//       } catch (resumeError) {
+//         console.error('Resume processing error:', resumeError);
+//         return res.status(500).json({
+//           success: false,
+//           error: 'Failed to process resume',
+//           details: process.env.NODE_ENV === 'development' ? resumeError.message : undefined
+//         });
+//       }
+//     }
+
+//     // Update candidate
+//     const updatedCandidate = await Candidate.findByIdAndUpdate(
+//       id,
+//       updates,
+//       { new: true, runValidators: true }
+//     )
+//       .populate('resume')
+//       .populate('jobId')
+//       .populate('stage')
+//       .populate('currentLocation preferredLocation', 'name')
+//       .populate('source', 'name')
+//       .populate('owner', 'name email');
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Candidate updated successfully",
+//       candidate: updatedCandidate
+//     });
+//   } catch (error) {
+//     console.error('Error updating candidate:', error);
+    
+//     // Handle duplicate key errors
+//     if (error.code === 11000) {
+//       const field = Object.keys(error.keyPattern)[0];
+//       return res.status(400).json({
+//         success: false,
+//         error: `Candidate with this ${field} already exists`
+//       });
+//     }
+
+//     // Handle validation errors
+//     if (error.name === 'ValidationError') {
+//       const messages = Object.values(error.errors).map(val => val.message);
+//       return res.status(400).json({
+//         success: false,
+//         error: messages.join(', ')
+//       });
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error updating candidate'
+//     });
+//   }
+// };
+
+// // Delete candidate with role-based access control
+// const deleteCandidate = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     // Base query with tenant check
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only delete their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     // Check if candidate exists and is accessible
+//     const candidate = await Candidate.findOne(query);
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     // Delete associated resume if exists
+//     if (candidate.resume) {
+//       const resume = await Resume.findById(candidate.resume);
+//       if (resume) {
+//         await cloudinary.uploader.destroy(resume.cloudinaryId);
+//         await Resume.findByIdAndDelete(resume._id);
+//       }
+//     }
+
+//     // Delete candidate
+//     await Candidate.findByIdAndDelete(id);
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Candidate deleted successfully"
+//     });
+//   } catch (error) {
+//     console.error('Error deleting candidate:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error deleting candidate'
+//     });
+//   }
+// };
+
+// // Get candidates for a specific job with role-based access
+// const getCandidatesForJob = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { jobId } = req.params;
+//     const { page = 1, limit = 10 } = req.query;
+
+//     const query = { jobId, tenantId };
+    
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const options = {
+//       page: parseInt(page),
+//       limit: parseInt(limit),
+//       sort: { createdAt: -1 },
+//       populate: [
+//         { path: 'stage', select: 'name' },
+//         { path: 'source', select: 'name' },
+//         { path: 'resume', select: 'status matchingScore' }
+//       ]
+//     };
+
+//     // Use the paginate method
+//     const result = await Candidate.paginate(query, options);
+
+//     res.status(200).json({
+//       success: true,
+//       count: result.totalDocs,
+//       page: result.page,
+//       pages: result.totalPages,
+//       candidates: result.docs
+//     });
+//   } catch (error) {
+//     console.error('Error fetching candidates for job:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error fetching candidates for job'
+//     });
+//   }
+// };
+
+// // Get candidate stage history with role-based access
+// const getCandidateStageHistory = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only access their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const candidate = await Candidate.findOne(query)
+//       .populate('stage', 'name')
+//       .populate('jobId', 'jobTitle')
+//       .populate({
+//         path: 'comments.changedBy',
+//         select: 'name email'
+//       });
+
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     // Sort comments by date
+//     const sortedComments = [...candidate.comments].sort(
+//       (a, b) => new Date(a.changedAt) - new Date(b.changedAt)
+//     );
+
+//     // Find current stage entry date
+//     let currentStageDate = candidate.createdAt; // Default to candidate creation date
+    
+//     const history = [];
+
+//     // Check if we have any stage change comments
+//     sortedComments.forEach((comment) => {
+//       if (comment.stageChangedTo) {
+//         history.push({
+//           from: comment.stageChangedFrom || 'Unknown',
+//           to: comment.stageChangedTo,
+//           changedAt: comment.changedAt,
+//           changedBy: comment.changedBy
+//         });
+
+//         // If this comment shows a change to the current stage, use this date
+//         if (comment.stageChangedTo === candidate.stage?.name) {
+//           if (!currentStageDate || new Date(comment.changedAt) > new Date(currentStageDate)) {
+//             currentStageDate = comment.changedAt;
+//           }
+//         }
+//       }
+//     });
+
+//     // If we have no stage change history but the candidate has a stage,
+//     // use the candidate creation date as when they entered the current stage
+//     if (history.length === 0 && candidate.stage?.name) {
+//       currentStageDate = candidate.createdAt;
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       candidateId: candidate._id,
+//       name: `${candidate.firstName} ${candidate.middleName || ''} ${candidate.lastName}`.trim(),
+//       jobTitle: candidate.jobId?.jobTitle || 'N/A',
+//       currentStage: candidate.stage?.name || 'Not Assigned',
+//       currentStageSince: currentStageDate,
+//       history
+//     });
+//   } catch (error) {
+//     console.error('Error getting candidate stage history:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error getting candidate stage history'
+//     });
+//   }
+// };
+
+// // Get candidate resume analysis with role-based access
+// const getCandidateResumeAnalysis = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only access their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const candidate = await Candidate.findOne(query)
+//       .populate('jobId', 'jobTitle jobDesc')
+//       .populate('stage', 'name')
+//       .populate('resume');
+
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     if (!candidate.resume) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'No resume found for this candidate'
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       candidate: {
+//         _id: candidate._id,
+//         name: `${candidate.firstName} ${candidate.middleName || ''} ${candidate.lastName}`.trim(),
+//         currentStage: candidate.stage?.name || 'Not assigned',
+//         jobTitle: candidate.jobId?.jobTitle || 'N/A',
+//         jobDescription: candidate.jobId?.jobDesc || 'No description available'
+//       },
+//       resumeAnalysis: {
+//         _id: candidate.resume._id,
+//         matchPercentage: candidate.resume.matchingScore || 0,
+//         matchingScore: candidate.resume.matchingScore || 0,
+//         status: candidate.resume.status || 'Not analyzed',
+//         recommendation: candidate.resume.aiAnalysis?.recommendation || 'Not available',
+//         skills: {
+//           matching: candidate.resume.aiAnalysis?.matchingSkills || [],
+//           missing: candidate.resume.aiAnalysis?.missingSkills || []
+//         },
+//         analysis: {
+//           overall: candidate.resume.aiAnalysis?.analysis || '',
+//           experience: candidate.resume.aiAnalysis?.experienceMatch || '',
+//           education: candidate.resume.aiAnalysis?.educationMatch || ''
+//         },
+//         resumeUrl: candidate.resume.url,
+//         parsedAt: candidate.resume.aiAnalysis?.parsedAt || candidate.resume.createdAt,
+//         lastUpdated: candidate.resume.updatedAt
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Error fetching candidate resume analysis:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error fetching candidate resume analysis'
+//     });
+//   }
+// };
+
+
+// // Update candidate stage with role-based access control
+// const updateCandidateStage = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+//     const { stageId, comment } = req.body;
+
+//     console.log('Request details:', { tenantId, candidateId: id, stageId, comment });
+
+//     // Validate required fields
+//     if (!stageId) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Stage ID is required'
+//       });
+//     }
+
+//     // Base query with tenant check
+//     const query = { _id: id, tenantId };
+    
+//     // Recruiters can only update their own candidates
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     // Check if candidate exists and is accessible
+//     const candidate = await Candidate.findOne(query);
+//     console.log('Candidate found:', candidate ? candidate._id : 'Not found');
+    
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     // Check if stage exists
+//     const stage = await mongoose.model('Stage').findById(stageId);
+    
+//     console.log('Stage found:', stage ? stage._id : 'Not found');
+    
+//     if (!stage) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid stage selected'
+//       });
+//     }
+
+//     // NEW: Validate that the user exists and belongs to the same tenant
+//     const user = await mongoose.model('User').findOne({
+//       _id: userId,
+//       tenantId: tenantId
+//     });
+    
+//     if (!user) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'User not found or not authorized for this tenant'
+//       });
+//     }
+
+//     // Get the current stage name before update
+//     const currentStage = await mongoose.model('Stage').findById(candidate.stage);
+//     const currentStageName = currentStage ? currentStage.name : 'Not assigned';
+
+//     // Get the new stage name
+//     const newStageName = stage.name;
+
+//     // Update candidate stage - use the user ObjectId directly
+//     const updatedCandidate = await Candidate.findByIdAndUpdate(
+//       id,
+//       { 
+//         stage: stageId,
+//         $push: {
+//           comments: {
+//             stageChangedFrom: currentStageName,
+//             stageChangedTo: newStageName,
+//             changedBy: userId, // This should be a valid ObjectId
+//             comment: comment || `Stage changed from ${currentStageName} to ${newStageName}`,
+//             changedAt: new Date()
+//           }
+//         }
+//       },
+//       { new: true, runValidators: true }
+//     )
+//       .populate('stage', 'name')
+//       .populate('jobId', 'jobTitle')
+//       .populate({
+//         path: 'comments.changedBy',
+//         select: 'name email'
+//       });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Candidate stage updated successfully",
+//       candidate: {
+//         _id: updatedCandidate._id,
+//         name: `${updatedCandidate.firstName} ${updatedCandidate.middleName || ''} ${updatedCandidate.lastName}`.trim(),
+//         currentStage: updatedCandidate.stage?.name,
+//         previousStage: currentStageName,
+//         updatedAt: updatedCandidate.updatedAt
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('Error updating candidate stage:', error);
+    
+//     // Handle validation errors
+//     if (error.name === 'ValidationError') {
+//       const messages = Object.values(error.errors).map(val => val.message);
+//       return res.status(400).json({
+//         success: false,
+//         error: messages.join(', ')
+//       });
+//     }
+
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error updating candidate stage'
+//     });
+//   }
+// };
+
+
+// function determineStatus(analysis) {
+//   if (!analysis || !analysis.aiAnalysis) return 'New';
+  
+//   const score = analysis.aiAnalysis.matchPercentage || 0;
+//   const recommendation = analysis.aiAnalysis.recommendation || '';
+
+//   if (score >= 75 || recommendation.includes('Strong')) return 'Shortlisted';
+//   if (score >= 50 || recommendation.includes('Moderate')) return 'Under Review';
+//   if (score < 50 || recommendation.includes('Weak')) return 'Pending Review';
+  
+//   return 'New';
+// }
+
+
+// const analyzeResume = async (req, res) => {
+//   try {
+//     const { tenantId } = req.user;
+//     const uploadedFile = req.file;
+//     const { jobId } = req.body;
+
+//     console.log('Uploaded file details:', {
+//       originalname: uploadedFile?.originalname,
+//       mimetype: uploadedFile?.mimetype,
+//       size: uploadedFile?.size
+//     });
+
+//     if (!uploadedFile) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'No resume file uploaded'
+//       });
+//     }
+
+//     // Get job description if jobId is provided
+//     let jobDescription = '';
+//     if (jobId) {
+//       const job = await mongoose.model('Job').findOne({ _id: jobId, tenantId });
+//       if (job) {
+//         jobDescription = job.jobDesc || '';
+//       }
+//     }
+
+//     // Analyze with Perplexity - ADD THE fileType PARAMETER
+//     const analysis = await analyzeResumeWithPerplexity(
+//       uploadedFile.buffer,
+//       uploadedFile.mimetype, // This was missing!
+//       jobDescription
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         extractedData: analysis.extractedData,
+//         aiAnalysis: analysis.aiAnalysis,
+//         rawText: analysis.rawText // Also include raw text if available
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Error analyzing resume:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error analyzing resume'
+//     });
+//   }
+// };
+
+// const previewResume = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     // Find candidate with access control
+//     const query = { _id: id, tenantId };
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const candidate = await Candidate.findOne(query).populate('resume');
+    
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     if (!candidate.resume) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'No resume found for this candidate'
+//       });
+//     }
+
+//     // Get the file extension
+//     const fileExt = candidate.resume.originalName.split('.').pop().toLowerCase();
+//     const contentType = getContentType(fileExt);
+
+//     if (!contentType) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Unsupported file type for preview'
+//       });
+//     }
+
+//     // Fetch the file from Cloudinary
+//     const response = await fetch(candidate.resume.url);
+    
+//     if (!response.ok) {
+//       throw new Error(`Failed to fetch resume from Cloudinary: ${response.statusText}`);
+//     }
+
+//     // Get the file as ArrayBuffer
+//     const arrayBuffer = await response.arrayBuffer();
+//     const buffer = Buffer.from(arrayBuffer);
+
+//     // Set headers and send the file
+//     res.setHeader('Content-Type', contentType);
+//     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(candidate.resume.originalName)}"`);
+//     res.send(buffer);
+
+//   } catch (error) {
+//     console.error('Error previewing resume:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error previewing resume'
+//     });
+//   }
+// };
+
+// // Download candidate's resume
+// const downloadResume = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { id } = req.params;
+
+//     // Find candidate with access control
+//     const query = { _id: id, tenantId };
+//     if (role === 'recruiter') {
+//       query.owner = userId;
+//     }
+
+//     const candidate = await Candidate.findOne(query).populate('resume');
+    
+//     if (!candidate) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Candidate not found or not accessible'
+//       });
+//     }
+
+//     if (!candidate.resume) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'No resume found for this candidate'
+//       });
+//     }
+
+//     // Get the file extension and proper content type
+//     const fileExt = candidate.resume.originalName.split('.').pop().toLowerCase();
+//     const contentType = getContentType(fileExt) || 'application/octet-stream';
+
+//     // Fetch the file from Cloudinary
+//     const response = await fetch(candidate.resume.url);
+    
+//     if (!response.ok) {
+//       throw new Error(`Failed to fetch resume from Cloudinary: ${response.statusText}`);
+//     }
+
+//     // Get the file as ArrayBuffer and convert to Buffer
+//     const arrayBuffer = await response.arrayBuffer();
+//     const fileBuffer = Buffer.from(arrayBuffer);
+
+//     // Set proper headers for download
+//     res.setHeader('Content-Type', contentType);
+//     res.setHeader('Content-Length', fileBuffer.length);
+//     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(candidate.resume.originalName)}"`);
+    
+//     // Send the file buffer
+//     res.end(fileBuffer);
+
+//   } catch (error) {
+//     console.error('Error downloading resume:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Error downloading resume'
+//     });
+//   }
+// };
+
+// // Helper function to determine content type
+// function getContentType(fileExt) {
+//   const contentTypes = {
+//     pdf: 'application/pdf',
+//     doc: 'application/msword',
+//     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+//     txt: 'text/plain',
+//     rtf: 'application/rtf',
+//     jpg: 'image/jpeg',
+//     jpeg: 'image/jpeg',
+//     png: 'image/png'
+//   };
+//   return contentTypes[fileExt] || null;
+// }
+
+// // const downloadTemplate = async (req, res) => {
+// //   try {
+// //     const { tenantId } = req.user;
+    
+// //     // Create workbook
+// //     const workbook = new ExcelJS.Workbook();
+// //     const worksheet = workbook.addWorksheet('Candidates Template');
+    
+// //     // Add headers
+// //     worksheet.columns = [
+// //       { header: 'First Name*', key: 'firstName', width: 20 },
+// //       { header: 'Last Name*', key: 'lastName', width: 20 },
+// //       { header: 'Email*', key: 'email', width: 30 },
+// //       { header: 'Mobile*', key: 'mobile', width: 15 },
+// //       { header: 'Experience (years)', key: 'experience', width: 15 },
+// //       { header: 'Skills (comma separated)', key: 'skills', width: 30 },
+// //       { header: 'Education', key: 'education', width: 25 },
+// //       { header: 'Available to Join (days)', key: 'availableToJoin', width: 20 },
+// //       { header: 'Current Location', key: 'currentLocation', width: 20 },
+// //       { header: 'Preferred Location', key: 'preferredLocation', width: 20 },
+// //       { header: 'Source', key: 'source', width: 20 },
+// //       { header: 'Gender', key: 'gender', width: 10 },
+// //       { header: 'Date of Birth (YYYY-MM-DD)', key: 'dob', width: 15 }
+// //     ];
+    
+// //     // Add sample data row
+// //     const sampleRow = worksheet.addRow({
+// //       firstName: 'John',
+// //       lastName: 'Doe',
+// //       email: 'john.doe@example.com',
+// //       mobile: '1234567890',
+// //       experience: '5',
+// //       skills: 'JavaScript, React, Node.js',
+// //       education: 'Bachelor of Engineering',
+// //       availableToJoin: '30',
+// //       currentLocation: 'Chennai',
+// //       preferredLocation: 'Bangalore',
+// //       source: 'LinkedIn',
+// //       gender: 'Male',
+// //       dob: '1990-01-01'
+// //     });
+    
+// //     // Style the header row
+// //     worksheet.getRow(1).eachCell((cell) => {
+// //       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+// //       cell.fill = {
+// //         type: 'pattern',
+// //         pattern: 'solid',
+// //         fgColor: { argb: 'FF0070C0' } // Blue background
+// //       };
+// //       cell.alignment = { vertical: 'middle', horizontal: 'center' };
+// //       cell.border = {
+// //         top: { style: 'thin' },
+// //         left: { style: 'thin' },
+// //         bottom: { style: 'thin' },
+// //         right: { style: 'thin' }
+// //       };
+// //     });
+    
+// //     // Style the sample row
+// //     sampleRow.eachCell((cell) => {
+// //       cell.font = { italic: true };
+// //       cell.fill = {
+// //         type: 'pattern',
+// //         pattern: 'solid',
+// //         fgColor: { argb: 'FFF2F2F2' } // Light gray background
+// //       };
+// //     });
+    
+// //     // Add data validation for gender
+// //     worksheet.dataValidations.add('M2:M1000', {
+// //       type: 'list',
+// //       allowBlank: true,
+// //       formulae: ['"Male,Female,Other,Prefer not to say"']
+// //     });
+    
+// //     // Add instructions worksheet
+// //     const instructionsSheet = workbook.addWorksheet('Instructions');
+    
+// //     instructionsSheet.columns = [
+// //       { header: 'Field', key: 'field', width: 20 },
+// //       { header: 'Description', key: 'description', width: 40 },
+// //       { header: 'Required', key: 'required', width: 10 },
+// //       { header: 'Example', key: 'example', width: 20 }
+// //     ];
+    
+// //     const instructions = [
+// //       { field: 'First Name', description: 'Candidate first name', required: 'Yes', example: 'John' },
+// //       { field: 'Last Name', description: 'Candidate last name', required: 'Yes', example: 'Doe' },
+// //       { field: 'Email', description: 'Valid email address', required: 'Yes', example: 'john@example.com' },
+// //       { field: 'Mobile', description: 'Phone number (10-15 digits)', required: 'Yes', example: '1234567890' },
+// //       { field: 'Experience', description: 'Years of experience', required: 'No', example: '5' },
+// //       { field: 'Skills', description: 'Comma-separated skills', required: 'No', example: 'JavaScript, React' },
+// //       { field: 'Education', description: 'Highest education', required: 'No', example: 'Bachelor of Engineering' },
+// //       { field: 'Available to Join', description: 'Days until available', required: 'No', example: '30' },
+// //       { field: 'Current Location', description: 'Current city', required: 'No', example: 'Chennai' },
+// //       { field: 'Preferred Location', description: 'Preferred work city', required: 'No', example: 'Bangalore' },
+// //       { field: 'Source', description: 'How candidate was found', required: 'No', example: 'LinkedIn' },
+// //       { field: 'Gender', description: 'Use dropdown options', required: 'No', example: 'Male' },
+// //       { field: 'Date of Birth', description: 'YYYY-MM-DD format', required: 'No', example: '1990-01-01' }
+// //     ];
+    
+// //     instructions.forEach(instruction => {
+// //       instructionsSheet.addRow(instruction);
+// //     });
+    
+// //     // Style instructions sheet header
+// //     instructionsSheet.getRow(1).eachCell((cell) => {
+// //       cell.font = { bold: true };
+// //       cell.fill = {
+// //         type: 'pattern',
+// //         pattern: 'solid',
+// //         fgColor: { argb: 'FFE6E6E6' }
+// //       };
+// //     });
+    
+// //     // Freeze header rows
+// //     worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+// //     instructionsSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    
+// //     // Set response headers
+// //     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+// //     res.setHeader('Content-Disposition', 'attachment; filename=candidate_upload_template.xlsx');
+// //     res.setHeader('Content-Transfer-Encoding', 'binary');
+// //     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+// //     res.setHeader('Pragma', 'no-cache');
+// //     res.setHeader('Expires', '0');
+    
+// //     // Write to response
+// //     await workbook.xlsx.write(res);
+// //     res.end();
+    
+// //   } catch (error) {
+// //     console.error('Error generating template:', error);
+// //     res.status(500).json({
+// //       success: false,
+// //       error: 'Failed to generate template'
+// //     });
+// //   }
+// // };
+
+// const downloadTemplate = async (req, res) => {
+//   try {
+//     const { tenantId } = req.user;
+    
+//     // Create workbook
+//     const workbook = new ExcelJS.Workbook();
+//     const worksheet = workbook.addWorksheet('Candidates Template');
+    
+//     // Add headers
+//     worksheet.columns = [
+//       { header: 'First Name*', key: 'firstName', width: 20 },
+//       { header: 'Last Name*', key: 'lastName', width: 20 },
+//       { header: 'Email*', key: 'email', width: 30 },
+//       { header: 'Mobile*', key: 'mobile', width: 15 },
+//       { header: 'Experience (years)', key: 'experience', width: 15 },
+//       { header: 'Skills (comma separated)', key: 'skills', width: 30 },
+//       { header: 'Education', key: 'education', width: 25 },
+//       { header: 'Available to Join (days)', key: 'availableToJoin', width: 20 },
+//       { header: 'Current Location', key: 'currentLocation', width: 20 },
+//       { header: 'Preferred Location', key: 'preferredLocation', width: 20 },
+//       { header: 'Source', key: 'source', width: 20 },
+//       { header: 'Gender', key: 'gender', width: 10 },
+//       { header: 'Date of Birth (YYYY-MM-DD)', key: 'dob', width: 15 }
+//     ];
+    
+//     // Add sample data row
+//     const sampleRow = worksheet.addRow({
+//       firstName: 'John',
+//       lastName: 'Doe',
+//       email: 'john.doe@example.com',
+//       mobile: '1234567890',
+//       experience: '5',
+//       skills: 'JavaScript, React, Node.js',
+//       education: 'Bachelor of Engineering',
+//       availableToJoin: '30',
+//       currentLocation: 'Chennai',
+//       preferredLocation: 'Bangalore',
+//       source: 'LinkedIn',
+//       gender: 'Male',
+//       dob: '1990-01-01'
+//     });
+    
+//     // Style the header row
+//     worksheet.getRow(1).eachCell((cell) => {
+//       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FF0070C0' } // Blue background
+//       };
+//       cell.alignment = { vertical: 'middle', horizontal: 'center' };
+//       cell.border = {
+//         top: { style: 'thin' },
+//         left: { style: 'thin' },
+//         bottom: { style: 'thin' },
+//         right: { style: 'thin' }
+//       };
+//     });
+    
+//     // Style the sample row
+//     sampleRow.eachCell((cell) => {
+//       cell.font = { italic: true };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FFF2F2F2' } // Light gray background
+//       };
+//     });
+    
+//     // Add data validation for gender
+//     worksheet.dataValidations.add('M2:M1000', {
+//       type: 'list',
+//       allowBlank: true,
+//       formulae: ['"Male,Female,Other,Prefer not to say"']
+//     });
+    
+//     // Add instructions worksheet
+//     const instructionsSheet = workbook.addWorksheet('Instructions');
+    
+//     instructionsSheet.columns = [
+//       { header: 'Field', key: 'field', width: 20 },
+//       { header: 'Description', key: 'description', width: 40 },
+//       { header: 'Required', key: 'required', width: 10 },
+//       { header: 'Example', key: 'example', width: 20 }
+//     ];
+    
+//     const instructions = [
+//       { field: 'First Name', description: 'Candidate first name', required: 'Yes', example: 'John' },
+//       { field: 'Last Name', description: 'Candidate last name', required: 'Yes', example: 'Doe' },
+//       { field: 'Email', description: 'Valid email address', required: 'Yes', example: 'john@example.com' },
+//       { field: 'Mobile', description: 'Phone number (10-15 digits)', required: 'Yes', example: '1234567890' },
+//       { field: 'Experience', description: 'Years of experience', required: 'No', example: '5' },
+//       { field: 'Skills', description: 'Comma-separated skills', required: 'No', example: 'JavaScript, React' },
+//       { field: 'Education', description: 'Highest education', required: 'No', example: 'Bachelor of Engineering' },
+//       { field: 'Available to Join', description: 'Days until available', required: 'No', example: '30' },
+//       { field: 'Current Location', description: 'Current city', required: 'No', example: 'Chennai' },
+//       { field: 'Preferred Location', description: 'Preferred work city', required: 'No', example: 'Bangalore' },
+//       { field: 'Source', description: 'How candidate was found', required: 'No', example: 'LinkedIn' },
+//       { field: 'Gender', description: 'Use dropdown options', required: 'No', example: 'Male' },
+//       { field: 'Date of Birth', description: 'YYYY-MM-DD format', required: 'No', example: '1990-01-01' }
+//     ];
+    
+//     instructions.forEach(instruction => {
+//       instructionsSheet.addRow(instruction);
+//     });
+    
+//     // Style instructions sheet header
+//     instructionsSheet.getRow(1).eachCell((cell) => {
+//       cell.font = { bold: true };
+//       cell.fill = {
+//         type: 'pattern',
+//         pattern: 'solid',
+//         fgColor: { argb: 'FFE6E6E6' }
+//       };
+//     });
+    
+//     // Freeze header rows
+//     worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+//     instructionsSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    
+//     // Set response headers - FIXED: Use proper content type and headers
+//     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+//     res.setHeader('Content-Disposition', 'attachment; filename=candidate_upload_template.xlsx');
+//     res.setHeader('Content-Transfer-Encoding', 'binary');
+//     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+//     res.setHeader('Pragma', 'no-cache');
+//     res.setHeader('Expires', '0');
+    
+//     // Write to response - FIXED: Use proper write method
+//     await workbook.xlsx.write(res);
+    
+//     // End the response after writing the file
+//     res.end();
+    
+//   } catch (error) {
+//     console.error('Error generating template:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: 'Failed to generate template'
+//     });
+//   }
+// };
+
+// // Bulk upload candidates from Excel
+// // In your candidateController.js - bulkUploadCandidates function
+// const bulkUploadCandidates = async (req, res) => {
+//   try {
+//     const { tenantId, _id: userId, role } = req.user;
+//     const { jobId } = req.body;
+//     const file = req.file;
+    
+//     if (!file) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'No file uploaded'
+//       });
+//     }
+    
+//     // Check permissions
+//     if (!['admin', 'recruiter'].includes(role)) {
+//       return res.status(403).json({
+//         success: false,
+//         error: 'Only admins and recruiters can upload candidates'
+//       });
+//     }
+    
+//     // Validate file type
+//     const allowedExtensions = ['.xls', '.xlsx'];
+//     const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+//     if (!allowedExtensions.includes(fileExtension)) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Only Excel files (.xlsx, .xls) are allowed'
+//       });
+//     }
+    
+//     // Load ExcelJS
+//     const ExcelJS = require('exceljs');
+    
+//     // Process Excel file
+//     const workbook = new ExcelJS.Workbook();
+    
+//     try {
+//       await workbook.xlsx.load(file.buffer);
+//     } catch (excelError) {
+//       console.error('Excel parsing error:', excelError);
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid Excel file. Please check the format and try again.'
+//       });
+//     }
+    
+//     if (workbook.worksheets.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Excel file contains no worksheets'
+//       });
+//     }
+    
+//     const worksheet = workbook.worksheets[0];
+//     const candidates = [];
+//     const errors = [];
+    
+//     // Get locations, sources, and stages for validation and ID lookup
+//     const [locations, sources, stages] = await Promise.all([
+//       Location.find({ tenantId }).select('name _id'),
+//       Source.find({ tenantId }).select('name _id'),
+//       mongoose.model('Stage').find({}).select('name _id') // Get all stages (not tenant-specific)
+//     ]);
+    
+//     // Process rows (skip header row)
+//     for (let i = 2; i <= worksheet.rowCount; i++) {
+//       try {
+//         const row = worksheet.getRow(i);
+        
+//         // Skip empty rows
+//         const firstNameCell = row.getCell(1);
+//         if (!firstNameCell || !firstNameCell.value || firstNameCell.value.toString().trim() === '') {
+//           continue;
+//         }
+        
+//         // Helper function to extract cell value safely
+//         const getCellValue = (cell) => {
+//           if (!cell || cell.value === null || cell.value === undefined) {
+//             return '';
+//           }
+          
+//           // Handle different cell value types
+//           if (typeof cell.value === 'object') {
+//             // Check if it's a formula cell with result
+//             if (cell.value.result !== undefined) {
+//               return cell.value.result.toString().trim();
+//             }
+//             // Check if it's a rich text object
+//             if (cell.value.richText) {
+//               return cell.value.richText.map(rt => rt.text).join('').trim();
+//             }
+//             // Check if it's a hyperlink
+//             if (cell.value.text !== undefined) {
+//               return cell.value.text.toString().trim();
+//             }
+//             // For other object types, try to stringify or get text
+//             if (cell.value.text) {
+//               return cell.value.text.toString().trim();
+//             }
+//             // Last resort: string representation
+//             return cell.value.toString().trim();
+//           }
+          
+//           // For primitive types
+//           return cell.value.toString().trim();
+//         };
+        
+//         // Extract values
+//         const candidateData = {
+//           firstName: getCellValue(row.getCell(1)),
+//           lastName: getCellValue(row.getCell(2)),
+//           email: getCellValue(row.getCell(3)),
+//           mobile: getCellValue(row.getCell(4)),
+//           experience: getCellValue(row.getCell(5)) || '0',
+//           skills: getCellValue(row.getCell(6)),
+//           education: getCellValue(row.getCell(7)),
+//           availableToJoin: parseInt(getCellValue(row.getCell(8))) || 0,
+//           currentLocation: getCellValue(row.getCell(9)),
+//           preferredLocation: getCellValue(row.getCell(10)),
+//           source: getCellValue(row.getCell(11)),
+//           gender: getCellValue(row.getCell(12)),
+//           dob: getCellValue(row.getCell(13)) ? new Date(getCellValue(row.getCell(13))) : null,
+//           stage: 'Sourced',
+//           tenantId,
+//           createdBy: userId,
+//           owner: userId,
+//           jobId: jobId || null
+//         };
+        
+//         // Validate required fields
+//         if (!candidateData.firstName || !candidateData.lastName || !candidateData.email) {
+//           errors.push(`Row ${i}: Missing required fields (first name, last name, or email)`);
+//           continue;
+//         }
+        
+//         // Validate email format
+//         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//         if (!emailRegex.test(candidateData.email)) {
+//           errors.push(`Row ${i}: Invalid email format - ${candidateData.email}`);
+//           continue;
+//         }
+        
+//         // Convert location names to ObjectIds - CREATE IF NOT EXISTS
+//         if (candidateData.currentLocation && candidateData.currentLocation.trim() !== '') {
+//           let location = locations.find(loc => 
+//             loc.name.toLowerCase() === candidateData.currentLocation.toLowerCase()
+//           );
+          
+//           if (!location) {
+//             // Create new location if it doesn't exist
+//             try {
+//               location = new Location({
+//                 name: candidateData.currentLocation,
+//                 tenantId
+//               });
+//               await location.save();
+//               locations.push(location); // Add to cache for subsequent rows
+//             } catch (createError) {
+//               errors.push(`Row ${i}: Failed to create location - ${candidateData.currentLocation}`);
+//               continue;
+//             }
+//           }
+          
+//           candidateData.currentLocation = location._id;
+//         } else {
+//           candidateData.currentLocation = undefined;
+//         }
+        
+//         if (candidateData.preferredLocation && candidateData.preferredLocation.trim() !== '') {
+//           let location = locations.find(loc => 
+//             loc.name.toLowerCase() === candidateData.preferredLocation.toLowerCase()
+//           );
+          
+//           if (!location) {
+//             // Create new location if it doesn't exist
+//             try {
+//               location = new Location({
+//                 name: candidateData.preferredLocation,
+//                 tenantId
+//               });
+//               await location.save();
+//               locations.push(location); // Add to cache for subsequent rows
+//             } catch (createError) {
+//               errors.push(`Row ${i}: Failed to create location - ${candidateData.preferredLocation}`);
+//               continue;
+//             }
+//           }
+          
+//           candidateData.preferredLocation = location._id;
+//         } else {
+//           candidateData.preferredLocation = undefined;
+//         }
+        
+//         // Convert source name to ObjectId - CREATE IF NOT EXISTS
+//         if (candidateData.source && candidateData.source.trim() !== '') {
+//           let source = sources.find(src => 
+//             src.name.toLowerCase() === candidateData.source.toLowerCase()
+//           );
+          
+//           if (!source) {
+//             // Create new source if it doesn't exist
+//             try {
+//               source = new Source({
+//                 name: candidateData.source,
+//                 tenantId
+//               });
+//               await source.save();
+//               sources.push(source); // Add to cache for subsequent rows
+//             } catch (createError) {
+//               errors.push(`Row ${i}: Failed to create source - ${candidateData.source}`);
+//               continue;
+//             }
+//           }
+          
+//           candidateData.source = source._id;
+//         } else {
+//           errors.push(`Row ${i}: Source is required`);
+//           continue;
+//         }
+        
+//         // Convert stage name to ObjectId
+//         if (candidateData.stage && candidateData.stage.trim() !== '') {
+//           const stage = stages.find(st => 
+//             st.name.toLowerCase() === candidateData.stage.toLowerCase()
+//           );
+          
+//           if (stage) {
+//             candidateData.stage = stage._id;
+//           } else {
+//             errors.push(`Row ${i}: Invalid stage - ${candidateData.stage}`);
+//             continue;
+//           }
+//         } else {
+//           // Set default stage if not provided
+//           const defaultStage = stages.find(st => st.name.toLowerCase() === 'sourced');
+//           if (defaultStage) {
+//             candidateData.stage = defaultStage._id;
+//           } else {
+//             errors.push(`Row ${i}: Default stage 'Sourced' not found in database`);
+//             continue;
+//           }
+//         }
+        
+//         // Validate mobile format (if provided)
+//         if (candidateData.mobile && candidateData.mobile.trim() !== '') {
+//           const mobileRegex = /^[0-9]{10,15}$/;
+//           const cleanMobile = candidateData.mobile.replace(/\D/g, '');
+//           if (!mobileRegex.test(cleanMobile)) {
+//             errors.push(`Row ${i}: Invalid mobile number format - ${candidateData.mobile}`);
+//             continue;
+//           }
+//           candidateData.mobile = cleanMobile;
+//         } else {
+//           errors.push(`Row ${i}: Mobile number is required`);
+//           continue;
+//         }
+        
+//         // Parse experience as float
+//         candidateData.experience = parseFloat(candidateData.experience) || 0;
+        
+//         candidates.push(candidateData);
+        
+//       } catch (rowError) {
+//         console.error(`Error processing row ${i}:`, rowError);
+//         errors.push(`Row ${i}: Error processing row - ${rowError.message}`);
+//       }
+//     }
+    
+//     console.log(`Processed ${candidates.length} valid candidates`);
+//     console.log(`Found ${errors.length} errors`);
+    
+//     if (candidates.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'No valid candidate data found in the file',
+//         details: errors
+//       });
+//     }
+    
+//     // Process candidates
+//     const results = {
+//       success: 0,
+//       failed: 0,
+//       errors: []
+//     };
+    
+//     // Process candidates sequentially to avoid overwhelming the database
+//     for (const candidateData of candidates) {
+//       try {
+//         // Check for duplicate email
+//         const existingCandidate = await Candidate.findOne({
+//           email: candidateData.email,
+//           tenantId
+//         });
+        
+//         if (existingCandidate) {
+//           results.failed++;
+//           results.errors.push(`Email ${candidateData.email} already exists`);
+//           continue;
+//         }
+        
+//         // Create candidate
+//         const candidate = new Candidate(candidateData);
+//         await candidate.save();
+//         results.success++;
+        
+//       } catch (error) {
+//         results.failed++;
+//         let errorMessage = `Failed to create candidate ${candidateData.email}`;
+        
+//         if (error.code === 11000) {
+//           errorMessage = `Duplicate email found: ${candidateData.email}`;
+//         } else if (error.name === 'ValidationError') {
+//           errorMessage = `Validation error for ${candidateData.email}: ${Object.values(error.errors).map(e => e.message).join(', ')}`;
+//         } else {
+//           errorMessage += `: ${error.message}`;
+//         }
+        
+//         results.errors.push(errorMessage);
+//       }
+//     }
+    
+
+//     // ADD NOTIFICATION CODE HERE - AFTER ALL CANDIDATES ARE PROCESSED
+//     if (req.user.role === 'recruiter' && createdCandidates.length > 0) {
+//       try {
+//         const job = jobId ? await mongoose.model('Job').findOne({ _id: jobId, tenantId }) : null;
+//         const jobTitle = job ? job.jobTitle : 'Multiple Jobs';
+//         const jobName = job ? job.jobName : 'No Specific Job';
+        
+//         const notificationMessage = `Recruiter ${req.user.username} bulk uploaded ${createdCandidates.length} candidates for job: ${jobTitle}`;
+        
+//         await createNotification({
+//           type: 'candidate_bulk_upload',
+//           message: notificationMessage,
+//           candidateCount: createdCandidates.length,
+//           jobId: jobId || null,
+//           jobName: jobName,
+//           performedBy: req.user._id,
+//           tenantId: req.user.tenantId
+//         });
+//       } catch (notificationError) {
+//         console.error('Failed to create bulk upload notification:', notificationError);
+//         // Don't throw error - bulk upload was successful
+//       }
+//     }
+//     // END OF NOTIFICATION CODE
+
+//     res.status(200).json({
+//       success: true,
+//       message: `Processed ${candidates.length} candidate(s)`,
+//       results: {
+//         total: candidates.length,
+//         successful: results.success,
+//         failed: results.failed,
+//         errors: results.errors
+//       }
+//     });
+    
+//   } catch (error) {
+//     console.error('Error in bulk upload:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Failed to process bulk upload'
+//     });
+//   }
+// };
+
+// module.exports = {
+//   createCandidate,
+//   getAllCandidates,
+//   getCandidateById,
+//   updateCandidate,
+//   deleteCandidate,
+//   getCandidatesForJob,
+//   getCandidateStageHistory,
+//   getCandidateResumeAnalysis,
+//   analyzeResume,
+//   previewResume,
+//   downloadResume,
+//   updateCandidateStage,
+//   downloadTemplate,
+//   bulkUploadCandidates
+// };
+
+
+
+//for vendor 
+
+
 const mongoose = require('mongoose');
 const ExcelJS=require('exceljs')
 const Candidate = require('../models/Candidate');
 const Resume = require('../models/Resume');
 const Source = require('../models/Source');
 const path = require('path');
+const jwt=require('jsonwebtoken')
 
 const Location = require('../models/Location');
 const { analyzeResumeWithPerplexity } = require('../services/perplexityMatchingService');
+const { createNotification } = require('../services/notificationService');
+const { sendVendorJobEmail } = require('../services/emailService');
+const { generateVendorToken } = require('../utils/auth'); // You'll need to create this
+
 const cloudinary = require('../config/cloudinary');
 const mongoosePaginate = require('mongoose-paginate-v2');
 
@@ -31,6 +1846,26 @@ const createCandidate = async (req, res) => {
         success: false,
         error: 'Source is required'
       });
+    }
+
+    // Validate CTC fields if provided
+    if (data.currentCTC && (isNaN(data.currentCTC) || data.currentCTC < 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Current CTC must be a valid positive number'
+      });
+    }
+
+    if (data.expectedCTC && (isNaN(data.expectedCTC) || data.expectedCTC < 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Expected CTC must be a valid positive number'
+      });
+    }
+
+    // Set default currency if not provided
+    if (!data.currency) {
+      data.currency = 'INR';
     }
 
     // Validate references belong to the same tenant
@@ -71,94 +1906,95 @@ const createCandidate = async (req, res) => {
 
     // Process resume if uploaded
     let resumeData = null;
-if (uploadedFile) {
-  try {
-    // Upload to Cloudinary
-    const cloudinaryResult = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          resource_type: "raw",
-          folder: `tenants/${tenantId}/resumes`,
-          public_id: `resume_${Date.now()}`,
-          tags: ['resume']
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      uploadStream.end(uploadedFile.buffer);
-    });
-
-    // Get job description for analysis
-    const jobDescription = data.jobId 
-      ? (await mongoose.model('Job').findById(data.jobId))?.jobDesc || ''
-      : '';
-
-    // Create basic resume data structure
-    const resumePayload = {
-      url: cloudinaryResult.secure_url,
-      cloudinaryId: cloudinaryResult.public_id,
-      fileType: uploadedFile.mimetype,
-      originalName: uploadedFile.originalname,
-      fileSize: uploadedFile.size,
-      tenantId,
-      userId,
-      jobId: data.jobId,
-      status: 'New'
-    };
-
-    // Only attempt analysis if we have a job description
-    if (jobDescription) {
+    if (uploadedFile) {
       try {
-        const analysis = await analyzeResumeWithPerplexity(
-          uploadedFile.buffer, 
-          jobDescription
-        );
-        
-        // Add analysis data to payload
-        resumePayload.aiAnalysis = analysis.aiAnalysis || {
-          matchPercentage: 0,
-          matchingSkills: [],
-          missingSkills: [],
-          recommendation: 'Analysis Completed',
-          analysis: 'Resume analysis completed'
+        // Upload to Cloudinary
+        const cloudinaryResult = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: "raw",
+              folder: `tenants/${tenantId}/resumes`,
+              public_id: `resume_${Date.now()}`,
+              tags: ['resume']
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          uploadStream.end(uploadedFile.buffer);
+        });
+
+        // Get job description for analysis
+        const jobDescription = data.jobId 
+          ? (await mongoose.model('Job').findById(data.jobId))?.jobDesc || ''
+          : '';
+
+        // Create basic resume data structure
+        const resumePayload = {
+          url: cloudinaryResult.secure_url,
+          cloudinaryId: cloudinaryResult.public_id,
+          fileType: uploadedFile.mimetype,
+          originalName: uploadedFile.originalname,
+          fileSize: uploadedFile.size,
+          tenantId,
+          userId,
+          jobId: data.jobId,
+          status: 'New'
         };
-        resumePayload.matchingScore = analysis.aiAnalysis?.matchPercentage || 0;
-        resumePayload.status = determineStatus(analysis);
-        
-        // Add extracted data if available
-        if (analysis.extractedData) {
-          resumePayload.skills = analysis.extractedData.skills || [];
-          resumePayload.experience = analysis.extractedData.experience || '';
-          resumePayload.education = analysis.extractedData.education || '';
+
+        // Only attempt analysis if we have a job description
+        if (jobDescription) {
+          try {
+            const analysis = await analyzeResumeWithPerplexity(
+              uploadedFile.buffer, 
+              uploadedFile.mimetype,
+              jobDescription
+            );
+            
+            // Add analysis data to payload
+            resumePayload.aiAnalysis = analysis.aiAnalysis || {
+              matchPercentage: 0,
+              matchingSkills: [],
+              missingSkills: [],
+              recommendation: 'Analysis Completed',
+              analysis: 'Resume analysis completed'
+            };
+            resumePayload.matchingScore = analysis.aiAnalysis?.matchPercentage || 0;
+            resumePayload.status = determineStatus(analysis);
+            
+            // Add extracted data if available
+            if (analysis.extractedData) {
+              resumePayload.skills = analysis.extractedData.skills || [];
+              resumePayload.experience = analysis.extractedData.experience || '';
+              resumePayload.education = analysis.extractedData.education || '';
+            }
+          } catch (analysisError) {
+            console.error('Analysis error:', analysisError);
+            // Continue with basic resume data
+            resumePayload.aiAnalysis = {
+              matchPercentage: 0,
+              matchingSkills: [],
+              missingSkills: [],
+              recommendation: 'Analysis Failed',
+              analysis: 'Could not analyze resume'
+            };
+          }
         }
-      } catch (analysisError) {
-        console.error('Analysis error:', analysisError);
-        // Continue with basic resume data
-        resumePayload.aiAnalysis = {
-          matchPercentage: 0,
-          matchingSkills: [],
-          missingSkills: [],
-          recommendation: 'Analysis Failed',
-          analysis: 'Could not analyze resume'
-        };
+
+        // Create resume record
+        resumeData = await Resume.create(resumePayload);
+        data.resume = resumeData._id;
+
+      } catch (resumeError) {
+        console.error('Resume processing error:', resumeError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to process resume',
+          details: process.env.NODE_ENV === 'development' ? resumeError.message : undefined
+        });
       }
     }
-
-    // Create resume record
-    resumeData = await Resume.create(resumePayload);
-    data.resume = resumeData._id;
-
-  } catch (resumeError) {
-    console.error('Resume processing error:', resumeError);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to process resume',
-      details: process.env.NODE_ENV === 'development' ? resumeError.message : undefined
-    });
-  }
-}
 
     // Create candidate
     const candidate = new Candidate({
@@ -177,6 +2013,34 @@ if (uploadedFile) {
         candidateId: savedCandidate._id
       });
     }
+
+    // ADD NOTIFICATION CODE HERE - RIGHT AFTER CANDIDATE IS SAVED
+    if (req.user.role === 'recruiter') {
+      try {
+        const jobTitle = data.jobId && job ? job.jobTitle : 'No Job Assigned';
+        const notificationMessage = `Recruiter ${req.user.username} added a new candidate: ${data.firstName} ${data.lastName} for job: ${jobTitle}. Current CTC: ${data.currentCTC || 'Not specified'} ${data.currency}, Expected CTC: ${data.expectedCTC || 'Not specified'} ${data.currency}`;
+        
+        // Get the Socket.io instance from the request
+        const io = req.app.get('io');
+        console.log('IO instance available:', !!io);
+        
+        // Pass the io instance as the second parameter to createNotification
+        await createNotification({
+          type: 'candidate_created',
+          message: notificationMessage,
+          candidateId: savedCandidate._id,
+          jobId: data.jobId || null,
+          jobName: job ? job.jobName : 'No Job',
+          performedBy: req.user._id,
+          tenantId: req.user.tenantId
+        }, io);
+        
+        console.log('✓ Notification created successfully');
+      } catch (notificationError) {
+        console.error('Failed to create notification:', notificationError);
+      }
+    }
+    // END OF NOTIFICATION CODE
 
     // Populate and return the created candidate
     const result = await Candidate.findById(savedCandidate._id)
@@ -914,6 +2778,12 @@ const analyzeResume = async (req, res) => {
     const uploadedFile = req.file;
     const { jobId } = req.body;
 
+    console.log('Uploaded file details:', {
+      originalname: uploadedFile?.originalname,
+      mimetype: uploadedFile?.mimetype,
+      size: uploadedFile?.size
+    });
+
     if (!uploadedFile) {
       return res.status(400).json({
         success: false,
@@ -930,14 +2800,19 @@ const analyzeResume = async (req, res) => {
       }
     }
 
-    // Analyze with Perplexity
-    const analysis = await analyzeResumeWithPerplexity(uploadedFile.buffer, jobDescription);
+    // Analyze with Perplexity - ADD THE fileType PARAMETER
+    const analysis = await analyzeResumeWithPerplexity(
+      uploadedFile.buffer,
+      uploadedFile.mimetype, // This was missing!
+      jobDescription
+    );
 
     res.status(200).json({
       success: true,
       data: {
         extractedData: analysis.extractedData,
-        aiAnalysis: analysis.aiAnalysis
+        aiAnalysis: analysis.aiAnalysis,
+        rawText: analysis.rawText // Also include raw text if available
       }
     });
   } catch (error) {
@@ -1697,6 +3572,32 @@ const bulkUploadCandidates = async (req, res) => {
       }
     }
     
+
+    // ADD NOTIFICATION CODE HERE - AFTER ALL CANDIDATES ARE PROCESSED
+    if (req.user.role === 'recruiter' && createdCandidates.length > 0) {
+      try {
+        const job = jobId ? await mongoose.model('Job').findOne({ _id: jobId, tenantId }) : null;
+        const jobTitle = job ? job.jobTitle : 'Multiple Jobs';
+        const jobName = job ? job.jobName : 'No Specific Job';
+        
+        const notificationMessage = `Recruiter ${req.user.username} bulk uploaded ${createdCandidates.length} candidates for job: ${jobTitle}`;
+        
+        await createNotification({
+          type: 'candidate_bulk_upload',
+          message: notificationMessage,
+          candidateCount: createdCandidates.length,
+          jobId: jobId || null,
+          jobName: jobName,
+          performedBy: req.user._id,
+          tenantId: req.user.tenantId
+        });
+      } catch (notificationError) {
+        console.error('Failed to create bulk upload notification:', notificationError);
+        // Don't throw error - bulk upload was successful
+      }
+    }
+    // END OF NOTIFICATION CODE
+
     res.status(200).json({
       success: true,
       message: `Processed ${candidates.length} candidate(s)`,
@@ -1717,6 +3618,146 @@ const bulkUploadCandidates = async (req, res) => {
   }
 };
 
+
+// const shareJobWithVendor = async (req, res) => {
+//   try {
+//     const { vendorEmail, jobId } = req.body;
+//     const { tenantId } = req.user;
+
+//     console.log('Sharing job with vendor:', { vendorEmail,jobName, jobId, tenantId });
+
+//     // Validate required fields
+//     if (!vendorEmail || !jobId) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Vendor email and job ID are required'
+//       });
+//     }
+
+//     // Validate email format
+//     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     if (!emailRegex.test(vendorEmail)) {
+//       return res.status(400).json({
+//         success: false,
+//         error: 'Invalid email format'
+//       });
+//     }
+
+//     // Get job details
+//     const job = await mongoose.model('Job').findOne({ _id: jobId, tenantId });
+//     if (!job) {
+//       return res.status(404).json({
+//         success: false,
+//         error: 'Job not found'
+//       });
+//     }
+
+//     // Generate unique token for vendor
+//     const token = generateVendorToken(vendorEmail, jobId, tenantId);
+//     console.log('Generated token:', token);
+    
+//     // Create upload link
+//     const uploadLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/vendor/upload/${token}`;
+//     console.log('Generated upload link:', uploadLink);
+
+//     // Prepare job data for email
+//     const jobData = {
+//       jobName: job.jobName,
+//       jobTitle: job.jobTitle,
+//       department: job.department,
+//       experience: job.experience,
+//       jobDesc: job.jobDesc,
+//       currency: job.jobFormId?.currency,
+//       amount: job.jobFormId?.amount
+//     };
+
+//     // Send email to vendor
+//     await sendVendorJobEmail(vendorEmail, jobData, uploadLink);
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Job shared successfully with vendor',
+//       data: {
+//         vendorEmail,
+//         jobTitle: job.jobTitle,
+//         uploadLink
+//       }
+//     });
+
+//   } catch (error) {
+//     console.error('Error sharing job with vendor:', error);
+//     res.status(500).json({
+//       success: false,
+//       error: error.message || 'Failed to share job with vendor'
+//     });
+//   }
+// };
+
+const shareJobWithVendor = async (req, res) => {
+  try {
+    const { vendorEmail, jobId } = req.body;
+    const { tenantId } = req.user;
+
+    // Validate required fields
+    if (!vendorEmail || !jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vendor email and job ID are required'
+      });
+    }
+
+    // Get job details with jobDesc
+    const job = await mongoose.model('Job').findOne({ _id: jobId, tenantId });
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    // ✅ Include jobDesc in the token payload
+    const token = jwt.sign(
+      {
+        vendorEmail,
+        jobId,
+        tenantId,
+        jobDesc: job.jobDesc, // ✅ Add job description to token
+        type: 'vendor_upload',
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60)
+      },
+      process.env.JWT_SECRET
+    );
+
+    // Create upload link
+    const uploadLink = `${process.env.FRONTEND_URL}/vendor/upload/${token}`;
+
+    // Send email to vendor (include jobDesc in email if needed)
+    const jobData = {
+      jobTitle: job.jobTitle,
+      jobDesc: job.jobDesc, // ✅ Include in email
+      department: job.department,
+      experience: job.experience,
+      currency: job.jobFormId?.currency,
+      amount: job.jobFormId?.amount
+    };
+
+    await sendVendorJobEmail(vendorEmail, jobData, uploadLink);
+
+    res.status(200).json({
+      success: true,
+      message: 'Job shared successfully with vendor',
+      data: { vendorEmail, jobTitle: job.jobTitle, uploadLink }
+    });
+
+  } catch (error) {
+    console.error('Error sharing job with vendor:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to share job with vendor'
+    });
+  }
+};
+
 module.exports = {
   createCandidate,
   getAllCandidates,
@@ -1731,5 +3772,6 @@ module.exports = {
   downloadResume,
   updateCandidateStage,
   downloadTemplate,
-  bulkUploadCandidates
+  bulkUploadCandidates,
+  shareJobWithVendor
 };

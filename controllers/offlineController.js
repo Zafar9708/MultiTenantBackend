@@ -5,6 +5,8 @@ const Interviewer = require('../models/Interviewer');
 const EmailTemplate = require('../models/EmailTemplate');
 const Feedback = require('../models/Feedback');
 const { sendInterviewEmail } = require('../services/emailService');
+const { createNotification } = require('../services/notificationService');
+
 
 const isValidObjectId = (id) => {
     return mongoose.Types.ObjectId.isValid(id);
@@ -129,6 +131,31 @@ const scheduleInterview = async (req, res) => {
         });
 
         await interview.save();
+
+        // ADD NOTIFICATION CODE HERE - RIGHT AFTER INTERVIEW IS SAVED
+        if (req.user.role === 'recruiter') {
+    try {
+        const notificationMessage = `Recruiter ${req.user.username} scheduled an offline interview for candidate: ${candidate.name} for round: ${round} on ${new Date(date).toLocaleDateString()} at ${startTime}`;
+        
+        // Get the Socket.io instance from the request
+        const io = req.app.get('io');
+        
+        // Pass the io instance as the second parameter to createNotification
+        await createNotification({
+            type: 'interview_scheduled',
+            message: notificationMessage,
+            candidateId: candidate.id,
+            jobId: jobId || null,
+            interviewId: interview._id,
+            performedBy: req.user._id,
+            tenantId: req.user.tenantId
+        }, io); // ← Add io as second parameter here
+    } catch (notificationError) {
+        console.error('Failed to create interview notification:', notificationError);
+        // Don't throw error - interview was scheduled successfully
+    }
+}
+        // END OF NOTIFICATION CODE
 
         // Send emails
         try {

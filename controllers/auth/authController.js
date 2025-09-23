@@ -561,12 +561,17 @@ exports.login = async (req, res, next) => {
 
     const user = await User.findOne({ email }).select('+password +tenantId +requiresPasswordReset');
     
+    console.log('Login attempt for:', email);
+    console.log('User found:', user ? user._id : 'None');
+    console.log('Requires password reset:', user ? user.requiresPasswordReset : 'N/A');
+
     if (!user || !(await user.comparePassword(password))) {
       return next(new AppError('Incorrect email or password', 401));
     }
 
     // Check if user requires password reset
     if (user.requiresPasswordReset) {
+      console.log('Redirecting to password reset for user:', user.email);
       return res.status(200).json({
         status: 'success',
         requiresPasswordReset: true,
@@ -587,7 +592,7 @@ exports.login = async (req, res, next) => {
       data: {
         user: {
           id: user._id,
-          name:user.username,
+          name: user.username,
           email: user.email,
           role: user.role,
           tenantId: user.tenantId,
@@ -838,6 +843,7 @@ exports.verifyOTP = async (req, res, next) => {
   }
 };
 
+// In your resetPassword controller, add this line:
 exports.resetPassword = async (req, res, next) => {
   try {
     const { token } = req.params;
@@ -865,6 +871,8 @@ exports.resetPassword = async (req, res, next) => {
     user.passwordResetExpires = undefined;
     user.otp = undefined;
     user.otpExpires = undefined;
+    user.requiresPasswordReset = false; // ADD THIS LINE
+    
     await user.save();
 
     // 4. Log the user in, send JWT
@@ -880,7 +888,8 @@ exports.resetPassword = async (req, res, next) => {
           id: user._id,
           email: user.email,
           role: user.role,
-          tenantId: user.tenantId
+          tenantId: user.tenantId,
+          requiresPasswordReset: false // ADD THIS LINE TOO
         }
       }
     });

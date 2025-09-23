@@ -8,6 +8,8 @@ const { createGoogleMeet } = require('../services/googleMeetService');
 const { createZoomMeeting } = require('../services/zoomService');
 const { createTeamsMeeting } = require('../services/teamsService');
 const { sendInterviewEmail, sendFeedbackEmail } = require('../services/emailService');
+const { createNotification } = require('../services/notificationService');
+
 
 const isValidObjectId = (id) => {
   if (!id || typeof id !== 'string') return false;
@@ -178,6 +180,41 @@ const scheduleInterview = async (req, res) => {
         });
 
         await interview.save();
+
+        // ADD NOTIFICATION CODE HERE - RIGHT AFTER INTERVIEW IS SAVED
+       if (req.user.role === 'recruiter') {
+    try {
+        // Get candidate details for notification
+        const candidateDetails = await Candidate.findById(candidate).select('firstName lastName');
+        const candidateName = candidateDetails ? `${candidateDetails.firstName} ${candidateDetails.lastName}` : 'Unknown Candidate';
+        
+        // Get job details if available
+        let jobTitle = 'No Job';
+        if (jobId) {
+            const job = await mongoose.model('Job').findById(jobId).select('jobTitle');
+            jobTitle = job ? job.jobTitle : 'Unknown Job';
+        }
+        
+        const notificationMessage = `Recruiter ${req.user.username} scheduled an interview for candidate: ${candidateName} for job: ${jobTitle} on ${new Date(date).toLocaleDateString()} at ${startTime}`;
+        
+        // Get the Socket.io instance from the request
+        const io = req.app.get('io');
+        
+        // Pass the io instance as the second parameter to createNotification
+        await createNotification({
+            type: 'interview_scheduled',
+            message: notificationMessage,
+            candidateId: candidate,
+            jobId: jobId || null,
+            interviewId: interview._id,
+            performedBy: req.user._id,
+            tenantId: req.user.tenantId
+        }, io); // ← Add io as second parameter here
+    } catch (notificationError) {
+        console.error('Failed to create interview notification:', notificationError);
+        // Don't throw error - interview was scheduled successfully
+    }
+}
 
         try {
             const feedbackLinks = interviewers.map(interviewer => ({

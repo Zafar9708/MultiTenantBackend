@@ -13,6 +13,7 @@ const {
     getLocation,
     addLocation
 } = require('../controllers/job/jobController');
+const {getNotifications,markNotificationsAsRead,getUnreadNotificationCount}=require('../controllers/notificationController')
 const { protect, authorize, tenantRestriction } = require('../middleware/auth');
 
 router.use(protect, tenantRestriction);
@@ -31,6 +32,9 @@ router.get('/:id',authorize('admin', 'recruiter'), getJobDetailById);
 router.get('/jobTemplates',authorize('admin', 'recruiter'),getJobTemplates)
 
 
-
+// Notification routes (only for admins)
+router.get('/notifications/all', authorize('admin'), getNotifications);
+router.patch('/notifications/mark-read', authorize('admin'), markNotificationsAsRead);
+router.get('/notifications/unread-count', authorize('admin'), getUnreadNotificationCount);
 
 module.exports = router;

@@ -313,10 +313,102 @@ const sendRecruiterAssignmentEmail = async (email, data) => {
   }
 };
 
+const sendVendorJobEmail = async (vendorEmail, jobData, uploadLink) => {
+  const { jobName,jobTitle, department, experience, jobDesc, currency, amount } = jobData;
+  
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || 'noreply@hireonboard.com',
+    to: vendorEmail,
+    subject: `New Job Opportunity: ${jobTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { padding: 25px; background: #f9f9f9; }
+          .job-details { background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin: 20px 0; }
+          .ctc-details { background: #e8f5e8; padding: 15px; border-radius: 8px; margin: 15px 0; }
+          .button { display: inline-block; padding: 14px 28px; background: #4caf50; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          .highlight { background: #fff3cd; padding: 10px; border-radius: 5px; border: 1px solid #ffeaa7; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>New Job Opportunity</h1>
+            <p>You've been invited to submit candidates</p>
+          </div>
+          
+          <div class="content">
+            <p>Hello Vendor,</p>
+            <p>We have a new job opening that matches your expertise. Please review the details below and submit qualified candidates using the provided link.</p>
+            
+            <div class="job-details">
+              
+              <h2>${jobName}</h2>
+              <h2>${jobTitle}</h2>
+              <p><strong>Department:</strong> ${department}</p>
+              <p><strong>Experience Required:</strong> ${experience}</p>
+              ${currency && amount ? `
+              <div class="ctc-details">
+                <p><strong>Compensation:</strong> ${currency} ${amount}</p>
+              </div>
+              ` : ''}
+              
+              <h3>Job Description:</h3>
+              <div>${jobDesc || 'No description provided'}</div>
+            </div>
+            
+            <div class="highlight">
+              <p><strong>📋 Candidate Requirements:</strong></p>
+              <p>Please ensure candidates meet the experience and skill requirements mentioned above.</p>
+              <p>Include Current CTC and Expected CTC for each candidate when submitting.</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${uploadLink}" class="button">Upload Candidates</a>
+            </div>
+            
+            <p><strong>Important:</strong></p>
+            <ul>
+              <li>This link is unique to your organization</li>
+              <li>You can submit multiple candidates for this position</li>
+              <li>Include complete candidate details (resume, contact information, CTC details)</li>
+              <li>Link will expire in 30 days</li>
+            </ul>
+          </div>
+          
+          <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>If you have any questions, contact the hiring team directly.</p>
+            <p>© ${new Date().getFullYear()} HireOnboard. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Vendor email sent successfully to:', vendorEmail);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Failed to send vendor email:', error);
+    throw new Error(`Failed to send email: ${error.message}`);
+  }
+};
+
 module.exports = {
   sendJobAssignmentEmail,
   sendSalesPersonNotification,
   sendInterviewEmail,
   sendFeedbackEmail,
-  sendRecruiterAssignmentEmail
+  sendRecruiterAssignmentEmail,
+  sendVendorJobEmail
 };

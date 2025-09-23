@@ -70,4 +70,8 @@ router.put('/:id', upload.single('resume'), candidateController.updateCandidate)
 router.get('/download/template', candidateController.downloadTemplate);
 router.post('/bulk-upload', excelUpload.single('file'), candidateController.bulkUploadCandidates);
 
+
+router.post('/share-with-vendor',  candidateController.shareJobWithVendor);
+
+
 module.exports = router;
