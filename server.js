@@ -59,18 +59,30 @@ mongoose.connect(process.env.DATABASE_URI)
   .then(() => {
     console.log("Database connected");
     
-    const PORT = process.env.PORT || 5000;
+    // Check if running on Azure App Service
+    const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
     
-    // Use the server instance that already has Socket.io attached
-    server.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT} with Socket.io`);
-      logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    });
+    if (isAzure) {
+      // On Azure: Let iisnode handle the listening
+      console.log('Running on Azure App Service - iisnode will handle server listening');
+      logger.info('Server initialized for Azure App Service');
+      
+      // iisnode will use the exported server
+      module.exports = server;
+    } else {
+      // On Local: Listen normally
+      const PORT = process.env.PORT || 5000;
+      
+      server.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT} with Socket.io`);
+        logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+      });
 
-    server.on('error', (err) => {
-      console.error('Server error:', err);
-      logger.error('Server error:', err);
-    });
+      server.on('error', (err) => {
+        console.error('Server error:', err);
+        logger.error('Server error:', err);
+      });
+    }
   })
   .catch(err => {
     console.error('Startup failed:', err);
