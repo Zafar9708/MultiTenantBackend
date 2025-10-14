@@ -55,22 +55,33 @@ app.get('/', (req, res) => {
   res.send('Hello, Node.js Server is Working with Socket.io!');
 });
 
-mongoose.connect(process.env.DATABASE_URI)
-  .then(() => {
-    console.log("Database connected");
-    
-    // Check if running on Azure App Service
-    const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
-    
-    if (isAzure) {
-      // On Azure: Let iisnode handle the listening
-      console.log('Running on Azure App Service - iisnode will handle server listening');
-      logger.info('Server initialized for Azure App Service');
+// Check if running on Azure App Service BEFORE connecting to database
+const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
+
+if (isAzure) {
+  // On Azure: Export immediately for iisnode, then connect to database
+  console.log('Detected Azure App Service environment');
+  console.log('WEBSITE_INSTANCE_ID:', process.env.WEBSITE_INSTANCE_ID);
+  
+  mongoose.connect(process.env.DATABASE_URI)
+    .then(() => {
+      console.log("Database connected");
+      logger.info('Server initialized for Azure App Service - iisnode will handle listening');
+    })
+    .catch(err => {
+      console.error('Startup failed:', err);
+      logger.error('Startup failed:', err);
+      process.exit(1);
+    });
+  
+  // Export the server for iisnode to use
+  module.exports = server;
+} else {
+  // On Local: Connect to database then listen
+  mongoose.connect(process.env.DATABASE_URI)
+    .then(() => {
+      console.log("Database connected");
       
-      // iisnode will use the exported server
-      module.exports = server;
-    } else {
-      // On Local: Listen normally
       const PORT = process.env.PORT || 5000;
       
       server.listen(PORT, '0.0.0.0', () => {
@@ -82,10 +93,10 @@ mongoose.connect(process.env.DATABASE_URI)
         console.error('Server error:', err);
         logger.error('Server error:', err);
       });
-    }
-  })
-  .catch(err => {
-    console.error('Startup failed:', err);
-    logger.error('Startup failed:', err);
-    process.exit(1);
-  });
+    })
+    .catch(err => {
+      console.error('Startup failed:', err);
+      logger.error('Startup failed:', err);
+      process.exit(1);
+    });
+}
