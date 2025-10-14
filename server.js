@@ -53,8 +53,22 @@ console.log("ENV Variables:", {
   IS_AZURE: !!process.env.WEBSITE_INSTANCE_ID
 });
 
+// Simple test endpoint
 app.get('/', (req, res) => {
   res.send('Hello, Node.js Server is Working with Socket.io!');
+});
+
+// iisnode health check
+app.get('/iisnode', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'iisnode is communicating with Node.js',
+    timestamp: new Date().toISOString(),
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      WEBSITE_INSTANCE_ID: process.env.WEBSITE_INSTANCE_ID ? 'SET' : 'NOT SET'
+    }
+  });
 });
 
 // Check if running on Azure App Service BEFORE connecting to database
@@ -67,17 +81,20 @@ console.log('server constructor:', server.constructor.name);
 console.log('=======================');
 
 if (isAzure) {
-  // On Azure: Export immediately for iisnode, then connect to database
+  // On Azure: Export the Express app for iisnode (NOT the HTTP server with Socket.io)
+  // iisnode will create its own HTTP server from the app
   console.log('✅ Detected Azure App Service environment');
   console.log('WEBSITE_INSTANCE_ID:', process.env.WEBSITE_INSTANCE_ID);
-  console.log('Exporting server for iisnode...');
+  console.log('Exporting Express app for iisnode (Socket.io may not work on Windows App Service)...');
   
   try {
-    // Export the server for iisnode to use
-    module.exports = server;
-    console.log('✅ Server exported successfully');
+    // Export just the Express app, let iisnode create the HTTP server
+    module.exports = app;
+    console.log('✅ Express app exported successfully');
+    console.log('⚠️  WARNING: Socket.io will NOT work with this configuration');
+    console.log('⚠️  For Socket.io support, use Linux App Service instead');
   } catch (exportError) {
-    console.error('❌ Error exporting server:', exportError);
+    console.error('❌ Error exporting app:', exportError);
     throw exportError;
   }
   
