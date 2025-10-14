@@ -260,10 +260,11 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-mongoose
-  .connect(process.env.DATABASE_URI)
-  .then(() => console.log('DB connection successful'))
-  .catch(err => console.error('DB connection error:', err));
+// MongoDB connection moved to server.js to avoid duplicate connections
+// mongoose
+//   .connect(process.env.DATABASE_URI)
+//   .then(() => console.log('DB connection successful'))
+//   .catch(err => console.error('DB connection error:', err));
 
 app.use((req, res, next) => {
   console.log(`Incoming ${req.method} ${req.path}`);
