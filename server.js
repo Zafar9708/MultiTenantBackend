@@ -71,68 +71,42 @@ app.get('/iisnode', (req, res) => {
   });
 });
 
-// Check if running on Azure App Service BEFORE connecting to database
-const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
-
-console.log('=== AZURE DETECTION ===');
-console.log('isAzure:', isAzure);
-console.log('server object type:', typeof server);
-console.log('server constructor:', server.constructor.name);
-console.log('=======================');
-
-if (isAzure) {
-  // On Azure: Export the Express app for iisnode (NOT the HTTP server with Socket.io)
-  // iisnode will create its own HTTP server from the app
-  console.log('✅ Detected Azure App Service environment');
-  console.log('WEBSITE_INSTANCE_ID:', process.env.WEBSITE_INSTANCE_ID);
-  console.log('Exporting Express app for iisnode (Socket.io may not work on Windows App Service)...');
-  
-  try {
-    // Export just the Express app, let iisnode create the HTTP server
-    module.exports = app;
-    console.log('✅ Express app exported successfully');
-    console.log('⚠️  WARNING: Socket.io will NOT work with this configuration');
-    console.log('⚠️  For Socket.io support, use Linux App Service instead');
-  } catch (exportError) {
-    console.error('❌ Error exporting app:', exportError);
-    throw exportError;
-  }
-  
-  // Then connect to database
-  mongoose.connect(process.env.DATABASE_URI)
-    .then(() => {
-      console.log("✅ Database connected");
-      logger.info('Server initialized for Azure App Service - iisnode will handle listening');
-    })
-    .catch(err => {
-      console.error('❌ Database connection failed:', err);
-      logger.error('Startup failed:', err);
-      process.exit(1);
-    });
-  
-} else {
-  // On Local: Connect to database then listen
-  console.log('Running in LOCAL mode (not Azure)');
-  
-  mongoose.connect(process.env.DATABASE_URI)
-    .then(() => {
-      console.log("Database connected");
-      
+// Connect to database
+mongoose.connect(process.env.DATABASE_URI)
+  .then(() => {
+    console.log("✅ Database connected");
+    
+    // Check if running on Azure (via iisnode/Azure App Service)
+    // iisnode sets PORT environment variable or we can check for WEBSITE_INSTANCE_ID
+    const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
+    
+    if (!isAzure) {
+      // Local development: start the server manually
+      console.log('🏠 Running in LOCAL mode');
       const PORT = process.env.PORT || 5000;
       
       server.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT} with Socket.io`);
+        console.log(`✅ Server running on port ${PORT} with Socket.io`);
         logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
       });
 
       server.on('error', (err) => {
-        console.error('Server error:', err);
+        console.error('❌ Server error:', err);
         logger.error('Server error:', err);
       });
-    })
-    .catch(err => {
-      console.error('Startup failed:', err);
-      logger.error('Startup failed:', err);
-      process.exit(1);
-    });
-}
+    } else {
+      // Azure App Service: iisnode will handle the server
+      console.log('☁️  Running on Azure App Service');
+      console.log('⚠️  WARNING: Socket.io may not work on Windows App Service');
+      logger.info('Server initialized for Azure App Service - iisnode handles listening');
+    }
+  })
+  .catch(err => {
+    console.error('❌ Database connection failed:', err);
+    logger.error('Startup failed:', err);
+    process.exit(1);
+  });
+
+// Export app for iisnode (this must be synchronous, outside any async operations)
+// iisnode will use this when it imports server.js
+module.exports = app;
