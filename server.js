@@ -45,10 +45,12 @@ console.log("Server.js is starting...");
 console.log('Environment check:');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
 console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('WEBSITE_INSTANCE_ID:', process.env.WEBSITE_INSTANCE_ID || 'NOT SET (running locally)');
 console.log("ENV Variables:", {
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
-  DATABASE_URI: process.env.DATABASE_URI ? "******" : "MISSING"
+  DATABASE_URI: process.env.DATABASE_URI ? "******" : "MISSING",
+  IS_AZURE: !!process.env.WEBSITE_INSTANCE_ID
 });
 
 app.get('/', (req, res) => {
@@ -58,26 +60,43 @@ app.get('/', (req, res) => {
 // Check if running on Azure App Service BEFORE connecting to database
 const isAzure = !!process.env.WEBSITE_INSTANCE_ID;
 
+console.log('=== AZURE DETECTION ===');
+console.log('isAzure:', isAzure);
+console.log('server object type:', typeof server);
+console.log('server constructor:', server.constructor.name);
+console.log('=======================');
+
 if (isAzure) {
   // On Azure: Export immediately for iisnode, then connect to database
-  console.log('Detected Azure App Service environment');
+  console.log('✅ Detected Azure App Service environment');
   console.log('WEBSITE_INSTANCE_ID:', process.env.WEBSITE_INSTANCE_ID);
+  console.log('Exporting server for iisnode...');
   
+  try {
+    // Export the server for iisnode to use
+    module.exports = server;
+    console.log('✅ Server exported successfully');
+  } catch (exportError) {
+    console.error('❌ Error exporting server:', exportError);
+    throw exportError;
+  }
+  
+  // Then connect to database
   mongoose.connect(process.env.DATABASE_URI)
     .then(() => {
-      console.log("Database connected");
+      console.log("✅ Database connected");
       logger.info('Server initialized for Azure App Service - iisnode will handle listening');
     })
     .catch(err => {
-      console.error('Startup failed:', err);
+      console.error('❌ Database connection failed:', err);
       logger.error('Startup failed:', err);
       process.exit(1);
     });
   
-  // Export the server for iisnode to use
-  module.exports = server;
 } else {
   // On Local: Connect to database then listen
+  console.log('Running in LOCAL mode (not Azure)');
+  
   mongoose.connect(process.env.DATABASE_URI)
     .then(() => {
       console.log("Database connected");
