@@ -260,11 +260,7 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// MongoDB connection moved to server.js to avoid duplicate connections
-// mongoose
-//   .connect(process.env.DATABASE_URI)
-//   .then(() => console.log('DB connection successful'))
-//   .catch(err => console.error('DB connection error:', err));
+// MongoDB connection is handled in server.js
 
 app.use((req, res, next) => {
   console.log(`Incoming ${req.method} ${req.path}`);
