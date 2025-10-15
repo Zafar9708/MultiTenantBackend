@@ -178,14 +178,18 @@ const app = express();
 // Create HTTP server
 const server = http.createServer(app);
 
+// Socket.io CORS Configuration - Allow multiple frontends
+const socketAllowedOrigins = [
+  "http://localhost:5173",           // Local development
+  "http://localhost:5000",           // Local backend
+  "https://wrocusats.vercel.app",    // Vercel deployment
+  process.env.AZURE_FRONTEND_URL     // Azure frontend (set in App Service settings)
+].filter(Boolean); // Remove undefined values
+
 // Initialize Socket.io with CORS configuration
 const io = socketIo(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "https://wrocusats.vercel.app",
-       "http://localhost:5000"
-    ],
+    origin: socketAllowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -267,13 +271,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// CORS Configuration - Allow multiple frontends
+const allowedOrigins = [
+  "http://localhost:5173",           // Local development
+  "https://wrocusats.vercel.app",    // Vercel deployment
+  process.env.AZURE_FRONTEND_URL     // Azure frontend (set in App Service settings)
+].filter(Boolean); // Remove undefined values
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://wrocusats.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: function(origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   })
 );
